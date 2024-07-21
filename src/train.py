@@ -133,7 +133,7 @@ def launch_experiment(exp_cfg, save_model=True, single_flag=True):
                 if l_p is not None:
                     writer.add_scalar('next phase/' + str(episode), l_p, t)
                 if goal is not None:
-                    writer.add_scalar('advice speed/' + str(episode), goal * env.max_speed, t)
+                    writer.add_scalar('advice speed lane0/' + str(episode), goal[0] * env.max_speed, t)
                     # print(goal * env.max_speed)
                 if v_a is not None:
                     writer.add_scalar('head CAV action/' + str(episode), v_a, t)
