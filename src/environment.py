@@ -16,8 +16,6 @@ sys.path.append(os.path.join(os.environ['SUMO_HOME'], 'tools'))
 
 class Environment:
     def __init__(self, config, single_flag):
-
-        self.traci = traci
         cfg = config['single'] if single_flag else config['Chengdu']
         self.single_flag = single_flag
 
@@ -140,6 +138,69 @@ class Environment:
                                         获取环境信息——交通状态
     """
 
+    def light_get_ctrl_lane(self, intersection, next_phase, curr_phase=False):
+        """获取该路口目前绿灯或即将绿灯的车道名。curr_phase:只获取当前相位车道的头CAV，还是路口所有车道的头CAV"""
+        lanes = self.light_get_lane(intersection)
+        if curr_phase:
+            phase = traci.trafficlight.getPhase(intersection)
+            if phase % 3 == 0:  # green light
+                lanes = [lanes[phase // 3], lanes[phase // 3 + 4]]
+            else:  # yellow or red, control cav on next phase lane
+                lanes = [lanes[next_phase], lanes[next_phase + 4]]
+        return lanes
+
+    @staticmethod
+    def cav_get_lane(cav_id):
+        """获取cav所在车道名"""
+        return traci.vehicle.getLaneID(cav_id)
+
+    @staticmethod
+    def lane_get_all_car(lane_id):
+        """获取车道上所有车辆id"""
+        return [_ for _ in traci.lane.getLastStepVehicleIDs(lane_id)]
+
+    def lane_get_cav(self, lane_id, head_only=True):
+        """获取车道上的CAV。head_only:只获取头CAV还是所有CAV"""
+        def find_cav(lane):  # 获取车道上最前一辆CAV的编号。若lane不是None，则返回最前车id，否则返回None
+            if lane is not None:
+                carID_type_dict = dict([(_, traci.vehicle.getTypeID(_)) for _ in traci.lane.getLastStepVehicleIDs(lane)])
+                if head_only:
+                    return next((vid for vid, vtype in reversed(list(carID_type_dict.items())) if vtype == 'CAV' and
+                                 self.get_head_cav_obs(vid)[1] * self.max_speed > 1), None)     # 仅控制车速大于1m/s的CAV
+                    # return next((vid for vid, vtype in reversed(list(carID_type_dict.items())) if
+                    #              vtype == 'CAV' and (self.get_head_cav_obs(vid)[3] * self.base_lane_length > 10 or
+                    #              self.get_head_cav_obs(vid)[3] == -1)), None)  # 跟路口或前车距离太短的不控，且只控最前面的那辆。
+                else:
+                    return [vid for vid, vtype in reversed(list(carID_type_dict.items())) if vtype == 'CAV']
+            else:  # lane is None
+                return None
+
+        cav_list = find_cav(lane_id)
+        add_lane_id = self.lane_get_con_lane(lane_id)[0]
+        if head_only:
+            return cav_list if cav_list else find_cav(add_lane_id)
+        else:
+            add_list = find_cav(add_lane_id) if add_lane_id else []
+            return cav_list + add_list
+
+    def light_get_head_cav(self, intersection, next_phase, curr_phase):
+        """获取该路口目前最靠近绿灯的CAV的标号。curr_phase:只获取当前相位车道的头CAV，还是路口所有车道的头CAV"""
+        lanes = self.light_get_ctrl_lane(intersection, next_phase, curr_phase)  # 保证了cav顺序和车道顺序一致
+        head_cav = []
+        for lane in lanes:  # 若green_lane上没有CAV，往后在add_lane上找找看。single则不必
+            cav_on_lane = self.lane_get_cav(lane, head_only=True)
+            # 当该条道路上没有车时，找到该条道路的上游道路，看道路上是否有车
+            if cav_on_lane:
+                head_cav.append(cav_on_lane)
+            else:
+                add_lane = self.lane_get_con_lane(lane)[0]
+                head_cav.append(self.lane_get_cav(add_lane, head_only=True))
+        return head_cav
+
+    def lane_get_speed(self, lane_id):
+        """获取车道平均速度。（路网设置的车道限速若大于env_cfg的13.89，则截断使最大速度保持一致）"""
+        return min(traci.lane.getLastStepMeanSpeed(lane_id), self.max_speed)
+
     def get_light_obs(self, intersection):
         """获取信号灯状态：当前相位,各相排队数（暂不考虑异构路口放信号灯，即目前只能是四相位）"""
         def get_lane_upcoming_veh_num(lane):  # 获取车道状态：车辆数（归一化因子：道路占用率）
@@ -169,7 +230,7 @@ class Environment:
         ave_v, head_xva = [], []
         for lane in lanes:
             ave_v.append(self.lane_get_speed(lane))
-            head_cav_id = self.get_cav_id_from_lane(lane, head_only=True)
+            head_cav_id = self.lane_get_cav(lane, head_only=True)
             if head_cav_id is not None:
                 # loc=该车到停车线的距离=道路总长度-当前位置(与起始线距离)=lane长度-到lane起点距离
                 loc = traci.lane.getLength(lane) - traci.vehicle.getLanePosition(head_cav_id)
@@ -184,44 +245,6 @@ class Environment:
             else:  # vehicle_id is None
                 head_xva += [-1, -1, -1]
         return ave_v + head_xva
-
-    def get_ctrl_lane_id(self, intersection, next_phase, curr_phase=False):
-        """获取该路口目前绿灯或即将绿灯的车道名。curr_phase:只获取当前相位车道的头CAV，还是路口所有车道的头CAV"""
-        lanes = self.light_get_lane(intersection)
-        if curr_phase:
-            phase = traci.trafficlight.getPhase(intersection)
-            if phase % 3 == 0:  # green light
-                lanes = [lanes[phase // 3], lanes[phase // 3 + 4]]
-            else:  # yellow or red, control cav on next phase lane
-                lanes = [lanes[next_phase], lanes[next_phase + 4]]
-        return lanes
-
-    def get_cav_id_from_lane(self, lane_id, head_only=True):
-        """获取车道上的CAV。curr_phase:只获取当前相位车道的头CAV，还是路口所有车道的头CAV"""
-        def find_cav(lane):  # 获取车道上最前一辆CAV的编号。若lane不是None，则返回最前车id，否则返回None
-            if lane is not None:
-                carID_type_dict = dict([(_, traci.vehicle.getTypeID(_)) for _ in traci.lane.getLastStepVehicleIDs(lane)])
-                if head_only:
-                    return next((vid for vid, vtype in reversed(list(carID_type_dict.items())) if vtype == 'CAV' and
-                                 self.get_head_cav_obs(vid)[1] * self.max_speed > 1), None)     # 仅控制车速大于1m/s的CAV
-                    # return next((vid for vid, vtype in reversed(list(carID_type_dict.items())) if
-                    #              vtype == 'CAV' and (self.get_head_cav_obs(vid)[3] * self.base_lane_length > 10 or
-                    #              self.get_head_cav_obs(vid)[3] == -1)), None)  # 跟路口或前车距离太短的不控，且只控最前面的那辆。
-                else:
-                    return [vid for vid, vtype in reversed(list(carID_type_dict.items())) if vtype == 'CAV']
-            else:  # lane is None
-                return None
-
-        cav_list = find_cav(lane_id)
-        add_lane_id = self.lane_get_con_lane(lane_id)[0]
-        if head_only:
-            return cav_list if cav_list else find_cav(add_lane_id)
-        else:
-            add_list = find_cav(add_lane_id) if add_lane_id else []
-            return cav_list + add_list
-
-    def lane_get_speed(self, lane_id):
-        return min(traci.lane.getLastStepMeanSpeed(lane_id), self.max_speed)
 
     def get_head_cav_obs(self, cav_id):
         """获取该车状态xva及其与前一辆车的dx、dv,还有它前方信号灯的通行状态及状态转换的倒计时"""
@@ -448,6 +471,12 @@ class Environment:
                                             智能体动作与环境交互
     """
 
+    @staticmethod
+    def set_light_action(intersection, index, duration):
+        """改变信号灯配时方案"""
+        traci.trafficlight.setPhase(intersection, index)
+        traci.trafficlight.setPhaseDuration(intersection, duration)
+
     def set_head_cav_action(self, cav_id, exact_v, exact_a):
         """将cav的加速度设置为给定值"""
         exact_speed = exact_v * self.max_speed
@@ -460,50 +489,6 @@ class Environment:
     def reset_head_cav(cav_id):
         """控制完成后，恢复默认的跟车模型"""
         traci.vehicle.setSpeed(cav_id, -1)
-
-    @staticmethod
-    def set_light_action(intersection, index, duration):
-        """改变信号灯配时方案"""
-        traci.trafficlight.setPhase(intersection, index)
-        traci.trafficlight.setPhaseDuration(intersection, duration)
-
-    def get_head_cav_id(self, intersection, next_phase, curr_phase):
-        """获取该路口目前最靠近绿灯的CAV的标号。curr_phase:只获取当前相位车道的头CAV，还是路口所有车道的头CAV"""
-
-        def find_head_cav(lane):  # 获取车道上最前一辆CAV的编号。若lane不是None，则返回最前车id，否则返回None
-            if lane is not None:
-                carID_type_dict = dict(
-                    [(_, traci.vehicle.getTypeID(_)) for _ in traci.lane.getLastStepVehicleIDs(lane)])
-                return next((vid for vid, vtype in reversed(list(carID_type_dict.items())) if vtype == 'CAV' and
-                             self.get_head_cav_obs(vid)[1] * self.max_speed > 1), None)
-                #              (lambda obs: abs(obs[3]) > obs[1] ** 2 / obs[2] / 2)(self.get_head_cav_obs(vid))), None)
-
-                # return next((vid for vid, vtype in reversed(list(carID_type_dict.items())) if
-                #              vtype == 'CAV' and (self.get_head_cav_obs(vid)[3] * self.base_lane_length > 10 or
-                #              self.get_head_cav_obs(vid)[3] == -1)), None)  # 跟路口或前车距离太短的不控，且只控最前面的那辆。
-            else:  # lane is None
-                return None
-
-        lanes = self.light_get_lane(intersection)
-        if curr_phase:
-            phase = traci.trafficlight.getPhase(intersection)
-            if phase % 3 == 0:  # green light
-                lanes = [lanes[phase // 3], lanes[phase // 3 + 4]]
-            else:   # yellow or red, control cav on next phase lane
-                lanes = [lanes[next_phase], lanes[next_phase + 4]]
-        head_cav = []
-        for lane in lanes:  # 若green_lane上没有CAV，往后在add_lane上找找看。single则不必
-            cav_on_lane = find_head_cav(lane)
-            # 当该条道路上没有车时，找到该条道路的上游道路，看道路上是否有车
-            head_cav.append(cav_on_lane if cav_on_lane else find_head_cav(self.lane_get_con_lane(lane)[0]))
-        return head_cav
-
-    def cav_get_cav_in_same_lane(self, cav_id):
-        # all_cav = self.get_cav_id_from_lane(traci.vehicle.getLaneID(cav_id), head_only=False)
-        all_cav = [_ for _ in traci.lane.getLastStepVehicleIDs(traci.vehicle.getLaneID(cav_id))]
-        if cav_id:
-            all_cav.remove(cav_id)
-        return all_cav
 
     def set_lane_act_speed(self, cav_id, delta_v):
         """将cav的加速度设置为给定值"""

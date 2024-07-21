@@ -4,7 +4,7 @@ import numpy as np
 import time
 from torch.utils.tensorboard import SummaryWriter
 
-import utils as utils
+import utils
 from environment import Environment
 from agent import IndependentLightAgent, ManagerLightAgent, IndependentCavAgent, WorkerCavAgent, LoyalCavAgent
 from configs import env_configs, get_agent_configs
@@ -12,98 +12,81 @@ from configs import env_configs, get_agent_configs
 np.random.seed(3407)  # 设置随机种子
 
 
-series_name = '0718_new_rou'
-
-experience_cfg_base = {
-    'T': {
-        'use_HRL': False,
-        'modify_dict': {'light': {'use_time': True,
-                                  'use_phase': False, },
-                        'cav': {'use_CAV': False, }}},
-    'P': {
-        'use_HRL': False,
-        'modify_dict': {'light': {'use_time': False,
-                                  'use_phase': True, },
-                        'cav': {'use_CAV': False, }}},
-    'V': {
-        'use_HRL': False,
-        'modify_dict': {'light': {'use_time': False,
-                                  'use_phase': False, },
-                        'cav': {'use_CAV': True, }}},
-    'TV': {
-        'use_HRL': False,
-        'modify_dict': {'light': {'use_time': True,
-                                  'use_phase': False, },
-                        'cav': {'use_CAV': True, }}},
-    'PV': {
-        'use_HRL': False,
-        'modify_dict': {'light': {'use_time': False,
-                                  'use_phase': True, },
-                        'cav': {'use_CAV': True, }}},
-    'tp': {
-        'use_HRL': False,
-        'modify_dict': {'light': {'use_time': True,
-                                  'use_phase': True, },
-                        'cav': {'use_CAV': False, }}},
-    'tpV': {
-        'use_HRL': False,
-        'modify_dict': {'light': {'use_time': True,
-                                  'use_phase': True, },
-                        'cav': {'use_CAV': True, }}},
-    'Gv': {
-        'use_HRL': True,
-        'modify_dict': {'light': {'use_time': False,
-                                  'use_phase': False, },
-                        'cav': {'use_CAV': True, }}},
-    'tgv': {
-        'use_HRL': True,
-        'modify_dict': {'light': {'use_time': True,
-                                  'use_phase': False, },
-                        'cav': {'use_CAV': True, }}},
-    'pgv': {
-        'use_HRL': True,
-        'modify_dict': {'light': {'use_time': False,
-                                  'use_phase': True, },
-                        'cav': {'use_CAV': True, }}},
-    'tpgv': {
-        'use_HRL': True,
-        'modify_dict': {'light': {'use_time': True,
-                                  'use_phase': True, },
-                        'cav': {'use_CAV': True, }}},
-}
-# experience_cfg = {'Gv_accumulate_haltR_correct_manager_learn_later': experience_cfg_base['Gv'],
-#                   'Gv_accumulate_haltR_correct_manager_learn_later_cavT2': {
-#         'use_HRL': True,
-#         'modify_dict': {'light': {'use_time': False,
-#                                   'use_phase': False, },
-#                         'cav': {'use_CAV': True,
-#                                 'cav': {'T': 2}}}},}
-# experience_cfg = {'tp': experience_cfg_base['tp']}
-# experience_cfg = {'T': experience_cfg_base['T'],
-#                   'P': experience_cfg_base['P'],}
-
-# experience_cfg = {'Gv_pretrain_manager_npOPC_absctrl': experience_cfg_base['Gv'],}  # 绝对控制：cfg换env.sumocfg,控制所有车速度且不管撞车
-# experience_cfg = {'Gv_noOPC_correct_maxmin': experience_cfg_base['Gv'],}
-# experience_cfg = {'Gv_withOPC_correct_maxmin': experience_cfg_base['Gv'],}
-# experience_cfg = {'Gv_noOPC_correct_maxmin_loyal_pretrain_manager': experience_cfg_base['Gv'],}
-# experience_cfg = {'Gv_noOPC_correct_maxmin_loyal_with_pretrained_alpha02_T2': {
-#     'use_HRL': True, 'modify_dict': {'light': {'use_time': False, 'use_phase': False, 'load_model_name': '0718_new_rou/Gv_noOPC_correct_maxmin_loyal_pretrain_manager'},
-#                                      'cav': {'use_CAV': True, 'alpha': 0.2, 'cav': {'T': 2}}}}}
-# experience_cfg = {'Gv_noOPC_correct_maxmin_loyal_with_pretrained_ctrl_all_cavs_alpha095': {
-#     'use_HRL': True, 'modify_dict': {'light': {'use_time': False, 'use_phase': False, 'load_model_name': '0718_new_rou/Gv_noOPC_correct_maxmin_loyal_pretrain_manager'},
-#                                      'cav': {'use_CAV': True}}}}
-
-experience_cfg = {'tpgv_noOPC_loyal_pretrain_manager': experience_cfg_base['tpgv'],
-                  'tpgv_noOPC_worker_pretrained_manager': {
-    'use_HRL': True, 'modify_dict': {'light': {'use_time': True, 'use_phase': True, 'load_model_name': '0718_new_rou/tpgv_noOPC_loyal_pretrain_manager'},
-                                     'cav': {'use_CAV': True}}},}
+series_name = '0721_new_rou'
+MAX_EPISODES = 100  # 训练轮数
+SUMO_GUI = True
 
 
-def launch_experiment(exp_cfg, save_model=True, single_flag=True, tmp=False):
-    MAX_EPISODES = 70  # 训练轮数
-    SUMO_GUI = True
-    exp_cfg['turn_on_gui'] = True
+def setting(base_key, change):
+    experience_cfg_base = {
+        'T': {
+            'use_HRL': False,
+            'modify_dict': {'light': {'use_time': True,
+                                      'use_phase': False, },
+                            'cav': {'use_CAV': False, }}},
+        'P': {
+            'use_HRL': False,
+            'modify_dict': {'light': {'use_time': False,
+                                      'use_phase': True, },
+                            'cav': {'use_CAV': False, }}},
+        'V': {
+            'use_HRL': False,
+            'modify_dict': {'light': {'use_time': False,
+                                      'use_phase': False, },
+                            'cav': {'use_CAV': True, }}},
+        'TV': {
+            'use_HRL': False,
+            'modify_dict': {'light': {'use_time': True,
+                                      'use_phase': False, },
+                            'cav': {'use_CAV': True, }}},
+        'PV': {
+            'use_HRL': False,
+            'modify_dict': {'light': {'use_time': False,
+                                      'use_phase': True, },
+                            'cav': {'use_CAV': True, }}},
+        'tp': {
+            'use_HRL': False,
+            'modify_dict': {'light': {'use_time': True,
+                                      'use_phase': True, },
+                            'cav': {'use_CAV': False, }}},
+        'tpV': {
+            'use_HRL': False,
+            'modify_dict': {'light': {'use_time': True,
+                                      'use_phase': True, },
+                            'cav': {'use_CAV': True, }}},
+        'Gv': {
+            'use_HRL': True,
+            'modify_dict': {'light': {'use_time': False,
+                                      'use_phase': False, },
+                            'cav': {'use_CAV': True, }}},
+        'tgv': {
+            'use_HRL': True,
+            'modify_dict': {'light': {'use_time': True,
+                                      'use_phase': False, },
+                            'cav': {'use_CAV': True, }}},
+        'pgv': {
+            'use_HRL': True,
+            'modify_dict': {'light': {'use_time': False,
+                                      'use_phase': True, },
+                            'cav': {'use_CAV': True, }}},
+        'tpgv': {
+            'use_HRL': True,
+            'modify_dict': {'light': {'use_time': True,
+                                      'use_phase': True, },
+                            'cav': {'use_CAV': True, }}},
+    }
+    return utils.change_dict(experience_cfg_base[base_key], {'modify_dict': change})
 
+
+experience_cfg = {'tpgv_noOPC_loyal_pretrain_manager': setting('tpgv', {}),
+                  'tpgv_noOPC_worker_pretrained_manager': setting('tpgv', {
+                      'light': {'load_model_name': '0718_new_rou/tpgv_noOPC_loyal_pretrain_manager'}})}
+
+
+def launch_experiment(exp_cfg, save_model=True, single_flag=True):
+    global MAX_EPISODES, SUMO_GUI
+
+    exp_cfg['turn_on_gui_after_learn_start'] = True
     light_configs, cav_configs = get_agent_configs(exp_cfg['modify_dict'])
 
     experiment_name = exp_cfg['experiment_name']
@@ -112,16 +95,13 @@ def launch_experiment(exp_cfg, save_model=True, single_flag=True, tmp=False):
     env = Environment(env_configs, single_flag)
     light_id_list = env.get_light_id()
 
-    light_class = ManagerLightAgent if exp_cfg['use_HRL'] else IndependentLightAgent
-    # cav_class = WorkerCavAgent if exp_cfg['use_HRL'] else IndependentCavAgent
     if exp_cfg['use_HRL']:
-        if tmp:
-            cav_agent = dict([(light_id, WorkerCavAgent(light_id, cav_configs)) for light_id in light_id_list])
+        if 'loyal' in exp_cfg['experiment_name']:   # 方便起见，以检索实验名中有无loyal字段来判断cav是否使用loyal
+            cav_agent = dict([(light_id, LoyalCavAgent(light_id, cav_configs)) for light_id in light_id_list])
         else:
-            cav_agent = dict([(light_id, LoyalCavAgent(light_id, cav_configs)) for light_id in light_id_list]) # ####注意，换成了loyal
+            cav_agent = dict([(light_id, WorkerCavAgent(light_id, cav_configs)) for light_id in light_id_list])
         light_agent = dict([(light_id, ManagerLightAgent(light_id, light_configs, cav_agent[light_id].get_oa,
-                                                         cav_agent[light_id].network.policy))
-                            for light_id in light_id_list])
+                                                         cav_agent[light_id].network.policy)) for light_id in light_id_list])
     else:
         light_agent = dict([(light_id, IndependentLightAgent(light_id, light_configs)) for light_id in light_id_list])
         cav_agent = dict([(light_id, IndependentCavAgent(light_id, cav_configs)) for light_id in light_id_list])
@@ -134,14 +114,14 @@ def launch_experiment(exp_cfg, save_model=True, single_flag=True, tmp=False):
         print("Ep:", episode, "File:", env.rou_path, rou_file_num, '\t', time.strftime("%Y-%m-%d %H:%M:%S"))
         if (light_agent[light_id_list[0]].pointer > light_agent[light_id_list[0]].learn_begin and
                 cav_agent[light_id_list[0]].pointer > cav_agent[light_id_list[0]].learn_begin):
-            SUMO_GUI = exp_cfg['turn_on_gui']
+            SUMO_GUI = exp_cfg['turn_on_gui_after_learn_start']
         env.start_env(SUMO_GUI, n_file=rou_file_num)
 
         waiting_time, halting_num, emission, fuel_consumption, mean_speed, time_loss = [], [], [], [], [], []
 
         for t in range(3000):
             for light_id in light_id_list:
-                if light_class.__name__ == 'ManagerLightAgent':
+                if light_agent[light_id].__class__.__name__ == 'ManagerLightAgent':
                     l_t, l_p, goal = light_agent[light_id].step(env)
                 else:   # 'IndependentLightAgent'
                     l_t, l_p = light_agent[light_id].step(env)
@@ -193,7 +173,7 @@ def launch_experiment(exp_cfg, save_model=True, single_flag=True, tmp=False):
 
         print('\n', episode,
               '\n\tlight:\tpointer=', light_agent[light_id_list[0]].pointer, '\tvar=', light_agent[light_id_list[0]].var, '\treward=', ep_light_r,
-              '\n\tcav:\tpointer=', cav_agent[light_id_list[0]].pointer, '\tvar=', cav_agent[light_id_list[0]].var,  '\treward=', ep_cav_r,
+              '\n\tcav:\tpointer=', cav_agent[light_id_list[0]].pointer, '\tvar=', cav_agent[light_id_list[0]].var, '\treward=', ep_cav_r,
               '\n\twait=', ep_wait, '\thalt=', ep_halt,
               '\tspeed=', ep_speed, '\tcollision=', env.collision_count,
               '\temission=', ep_emission, '\tfuel_consumption=', ep_fuel, '\ttime_loss=', ep_timeloss)
@@ -216,6 +196,5 @@ if __name__ == "__main__":
         series_name = series_name + '/' if series_name[-1] != '/' else series_name
         experience_cfg[key]['experiment_name'] = series_name + key
         print(experience_cfg[key]['experiment_name'], 'start running')
-        tmp = key == 'tpgv_noOPC_worker_pretrained_manager'
-        launch_experiment(experience_cfg[key], save_model=True, single_flag=True,tmp=tmp)
+        launch_experiment(experience_cfg[key], save_model=True, single_flag=True)
 

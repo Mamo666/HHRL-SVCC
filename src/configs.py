@@ -1,17 +1,8 @@
 
-import copy
+from utils import change_dict
 
 
 def get_agent_configs(modify_dict):
-    def change_dict(old_dict, change):
-        new_dict = copy.deepcopy(old_dict)
-        for key, value in change.items():
-            if isinstance(value, dict) and key in new_dict and isinstance(new_dict[key], dict):
-                new_dict[key] = change_dict(new_dict[key], value)
-            else:
-                new_dict[key] = value
-        return new_dict
-
     light, cav = modify_dict['light'], modify_dict['cav']
     return (change_dict(light_configs, light),
             change_dict(CAV_configs, cav))
@@ -63,6 +54,7 @@ env_configs = {
 
 
 light_configs = {
+    'use_opc': False,   # 注意，目前还没实现tg/pg/tpg的opc，只有G能用
     'use_time': True,   # 不用HATD3则用TD3
     'use_phase': True,
     'phase_agent': 'DQN',   # 'DQN'/'TD3'
@@ -92,20 +84,6 @@ light_configs = {
         'act_dim': 8,       # 速度建议智能体的动作空间 [路口控制车道数]
         'T': env_configs['yellow'] + env_configs['red'] + env_configs['min_green'],
         'hidden_dim': [400, 300],  # actor和critic网络隐藏层维度一样。
-
-        # 下面是为单独TD3制定目标准备的
-        'var': .6,
-        'tau': 0.005,  # 软更新参数
-        'gamma': 0.95,  # .95  20步
-        'batch_size': 64,  # 批大小
-        'memory_capacity': 20000,
-        # 'learn_start_ratio': 0.1,
-        'learn_start_ratio': 0.05,
-        # 'learn_start_ratio': 0.15,
-        'actor_learning_rate': 0.0001,
-        'critic_learning_rate': 0.001,
-        'actor_scheduler_step': 300,  # 200
-        'critic_scheduler_step': 300,  # 400
     },
 
     # 信号灯时长设置

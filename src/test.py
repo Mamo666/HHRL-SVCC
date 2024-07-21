@@ -9,140 +9,152 @@ from agent import IndependentLightAgent, ManagerLightAgent, IndependentCavAgent,
 from configs import env_configs, get_agent_configs
 
 env_configs['single']['sumocfg_path'] = '../sumo_sim_env/collision_env_tmp.sumocfg'    # 防止两边同时运行修改时撞车
-to_be_tested = '0627_new_rou'
+to_be_tested = '0718_new_rou'
 TEST_ROU_PATH = 'single/new_test/'
-experience_cfg_base = {
-    # 'baseline': {
-    #     'use_HRL': False,
-    #     'modify_dict': {'light': {'use_time': False,
-    #                               'use_phase': False,
-    #                               'train_model': False,
-    #                               'load_model_name': None, },
-    #                     'cav': {'use_CAV': False,
-    #                             'train_model': False,
-    #                             'load_model_name': None, }}},
-    'T': {
-        'use_HRL': False,
-        'modify_dict': {'light': {'use_time': True,
-                                  'use_phase': False,
-                                  'train_model': False,
-                                  'load_model_name': to_be_tested + '/T', },
-                        'cav': {'use_CAV': False,
-                                'train_model': False,
-                                'load_model_name': None, }}},
-    'P': {
-        'use_HRL': False,
-        'modify_dict': {'light': {'use_time': False,
-                                  'use_phase': True,
-                                  'train_model': False,
-                                  'load_model_name': to_be_tested + '/P', },
-                        'cav': {'use_CAV': False,
-                                'train_model': False,
-                                'load_model_name': None, }}},
-    'V': {
-        'use_HRL': False,
-        'modify_dict': {'light': {'use_time': False,
-                                  'use_phase': False,
-                                  'train_model': False,
-                                  'load_model_name': None, },
-                        'cav': {'use_CAV': True,
-                                'train_model': False,
-                                'load_model_name': to_be_tested + '/V', }}},
-    'TV': {
-        'use_HRL': False,
-        'modify_dict': {'light': {'use_time': True,
-                                  'use_phase': False,
-                                  'train_model': False,
-                                  'load_model_name': to_be_tested + '/TV', },
-                        'cav': {'use_CAV': True,
-                                'train_model': False,
-                                'load_model_name': to_be_tested + '/TV', }}},
-    'PV': {
-        'use_HRL': False,
-        'modify_dict': {'light': {'use_time': False,
-                                  'use_phase': True,
-                                  'train_model': False,
-                                  'load_model_name': to_be_tested + '/PV', },
-                        'cav': {'use_CAV': True,
-                                'train_model': False,
-                                'load_model_name': to_be_tested + '/PV', }}},
-    'tp': {
-        'use_HRL': False,
-        'modify_dict': {'light': {'use_time': True,
-                                  'use_phase': True,
-                                  'train_model': False,
-                                  'load_model_name': to_be_tested + '/tp', },
-                        'cav': {'use_CAV': False,
-                                'train_model': False,
-                                'load_model_name': None, }}},
-    'tpV': {
-        'use_HRL': False,
-        'modify_dict': {'light': {'use_time': True,
-                                  'use_phase': True,
-                                  'train_model': False,
-                                  'load_model_name': to_be_tested + '/tpV', },
-                        'cav': {'use_CAV': True,
-                                'train_model': False,
-                                'load_model_name': to_be_tested + '/tpV', }}},
-    'Gv': {
-        'use_HRL': True,
-        'modify_dict': {'light': {'use_time': False,
-                                  'use_phase': False,
-                                  'train_model': False,
-                                  'load_model_name': to_be_tested + '/Gv', },
-                        'cav': {'use_CAV': True,
-                                'train_model': False,
-                                'load_model_name': to_be_tested + '/Gv', }}},
-    'tgv': {
-        'use_HRL': True,
-        'modify_dict': {'light': {'use_time': True,
-                                  'use_phase': False,
-                                  'train_model': False,
-                                  'load_model_name': to_be_tested + '/tgv', },
-                        'cav': {'use_CAV': True,
-                                'train_model': False,
-                                'load_model_name': to_be_tested + '/tgv', }}},
-    'pgv': {
-        'use_HRL': True,
-        'modify_dict': {'light': {'use_time': False,
-                                  'use_phase': True,
-                                  'train_model': False,
-                                  'load_model_name': to_be_tested + '/pgv', },
-                        'cav': {'use_CAV': True,
-                                'train_model': False,
-                                'load_model_name': to_be_tested + '/pgv', }}},
-    'tpgv': {
-        'use_HRL': True,
-        'modify_dict': {'light': {'use_time': True,
-                                  'use_phase': True,
-                                  'train_model': False,
-                                  'load_model_name': to_be_tested + '/tpgv', },
-                        'cav': {'use_CAV': True,
-                                'train_model': False,
-                                'load_model_name': to_be_tested + '/tpgv', }}},
-}
-experience_cfg = {    # phase改为真值后，重训跟p相关的
-    'T': experience_cfg_base['T'],
-    'P': experience_cfg_base['P'],
-    'V': experience_cfg_base['V'],
-    'tp': experience_cfg_base['tp'],
-    'tpV': experience_cfg_base['tpV'],
-    'tpgv': experience_cfg_base['tpgv'],
+
+
+def setting(base_key, change):
+    experience_cfg_base = {
+        'baseline': {
+            'use_HRL': False,
+            'modify_dict': {'light': {'use_time': False,
+                                      'use_phase': False,
+                                      'train_model': False,
+                                      'load_model_name': None, },
+                            'cav': {'use_CAV': False,
+                                    'train_model': False,
+                                    'load_model_name': None, }}},
+        'T': {
+            'use_HRL': False,
+            'modify_dict': {'light': {'use_time': True,
+                                      'use_phase': False,
+                                      'train_model': False,
+                                      'load_model_name': to_be_tested + '/T', },
+                            'cav': {'use_CAV': False,
+                                    'train_model': False,
+                                    'load_model_name': None, }}},
+        'P': {
+            'use_HRL': False,
+            'modify_dict': {'light': {'use_time': False,
+                                      'use_phase': True,
+                                      'train_model': False,
+                                      'load_model_name': to_be_tested + '/P', },
+                            'cav': {'use_CAV': False,
+                                    'train_model': False,
+                                    'load_model_name': None, }}},
+        'V': {
+            'use_HRL': False,
+            'modify_dict': {'light': {'use_time': False,
+                                      'use_phase': False,
+                                      'train_model': False,
+                                      'load_model_name': None, },
+                            'cav': {'use_CAV': True,
+                                    'train_model': False,
+                                    'load_model_name': to_be_tested + '/V', }}},
+        'TV': {
+            'use_HRL': False,
+            'modify_dict': {'light': {'use_time': True,
+                                      'use_phase': False,
+                                      'train_model': False,
+                                      'load_model_name': to_be_tested + '/TV', },
+                            'cav': {'use_CAV': True,
+                                    'train_model': False,
+                                    'load_model_name': to_be_tested + '/TV', }}},
+        'PV': {
+            'use_HRL': False,
+            'modify_dict': {'light': {'use_time': False,
+                                      'use_phase': True,
+                                      'train_model': False,
+                                      'load_model_name': to_be_tested + '/PV', },
+                            'cav': {'use_CAV': True,
+                                    'train_model': False,
+                                    'load_model_name': to_be_tested + '/PV', }}},
+        'tp': {
+            'use_HRL': False,
+            'modify_dict': {'light': {'use_time': True,
+                                      'use_phase': True,
+                                      'train_model': False,
+                                      'load_model_name': to_be_tested + '/tp', },
+                            'cav': {'use_CAV': False,
+                                    'train_model': False,
+                                    'load_model_name': None, }}},
+        'tpV': {
+            'use_HRL': False,
+            'modify_dict': {'light': {'use_time': True,
+                                      'use_phase': True,
+                                      'train_model': False,
+                                      'load_model_name': to_be_tested + '/tpV', },
+                            'cav': {'use_CAV': True,
+                                    'train_model': False,
+                                    'load_model_name': to_be_tested + '/tpV', }}},
+        'Gv': {
+            'use_HRL': True,
+            'modify_dict': {'light': {'use_time': False,
+                                      'use_phase': False,
+                                      'train_model': False,
+                                      'load_model_name': to_be_tested + '/Gv', },
+                            'cav': {'use_CAV': True,
+                                    'train_model': False,
+                                    'load_model_name': to_be_tested + '/Gv', }}},
+        'tgv': {
+            'use_HRL': True,
+            'modify_dict': {'light': {'use_time': True,
+                                      'use_phase': False,
+                                      'train_model': False,
+                                      'load_model_name': to_be_tested + '/tgv', },
+                            'cav': {'use_CAV': True,
+                                    'train_model': False,
+                                    'load_model_name': to_be_tested + '/tgv', }}},
+        'pgv': {
+            'use_HRL': True,
+            'modify_dict': {'light': {'use_time': False,
+                                      'use_phase': True,
+                                      'train_model': False,
+                                      'load_model_name': to_be_tested + '/pgv', },
+                            'cav': {'use_CAV': True,
+                                    'train_model': False,
+                                    'load_model_name': to_be_tested + '/pgv', }}},
+        'tpgv': {
+            'use_HRL': True,
+            'modify_dict': {'light': {'use_time': True,
+                                      'use_phase': True,
+                                      'train_model': False,
+                                      'load_model_name': to_be_tested + '/tpgv', },
+                            'cav': {'use_CAV': True,
+                                    'train_model': False,
+                                    'load_model_name': to_be_tested + '/tpgv', }}},
+    }
+    return utils.change_dict(experience_cfg_base[base_key], {'modify_dict': change})
+
+
+experience_cfg = {
+    'baseline': setting('baseline', {}),
+    'T': setting('T', {}),
+    'P': setting('P', {}),
+    'V': setting('V', {}),
+    'tp': setting('tp', {}),
+    'tpV': setting('tpV', {}),
+    'tpgv': setting('tpgv', {}),
 }
 
 
 def launch_test(exp_cfg, single_flag=True):
-    light_class = ManagerLightAgent if exp_cfg['use_HRL'] else IndependentLightAgent
-    cav_class = WorkerCavAgent if exp_cfg['use_HRL'] else IndependentCavAgent
     light_configs, cav_configs = get_agent_configs(exp_cfg['modify_dict'])
+
     experiment_name = exp_cfg['experiment_name']
     writer = SummaryWriter('../log/' + experiment_name)
 
     env_configs['single']['rou_path'] = TEST_ROU_PATH
     env = Environment(env_configs, single_flag)
     light_id_list = env.get_light_id()
-    light_agent = dict([(light_id, light_class(light_id, light_configs)) for light_id in light_id_list])
-    cav_agent = dict([(light_id, cav_class(light_id, cav_configs)) for light_id in light_id_list])
+
+    if exp_cfg['use_HRL']:  # Loyal仅用于训练上层，不能真正用于控制
+        cav_agent = dict([(light_id, WorkerCavAgent(light_id, cav_configs)) for light_id in light_id_list])
+        light_agent = dict([(light_id, ManagerLightAgent(light_id, light_configs, cav_agent[light_id].get_oa,
+                                                         cav_agent[light_id].network.policy)) for light_id in light_id_list])
+    else:
+        light_agent = dict([(light_id, IndependentLightAgent(light_id, light_configs)) for light_id in light_id_list])
+        cav_agent = dict([(light_id, IndependentCavAgent(light_id, cav_configs)) for light_id in light_id_list])
 
     utils.txt_save('../log/' + str(experiment_name) + '/configs',
                    {'env': env_configs, 'light': light_configs, 'cav': cav_configs})
@@ -158,7 +170,7 @@ def launch_test(exp_cfg, single_flag=True):
 
         for t in range(3000):
             for light_id in light_id_list:
-                if light_class.__name__ == 'ManagerLightAgent':
+                if light_agent[light_id].__class__.__name__ == 'ManagerLightAgent':
                     l_t, l_p, goal = light_agent[light_id].step(env)
                 else:   # 'IndependentLightAgent'
                     l_t, l_p = light_agent[light_id].step(env)
@@ -169,9 +181,9 @@ def launch_test(exp_cfg, single_flag=True):
                     writer.add_scalar('green time/' + str(episode), l_t, t)
                 if l_p is not None:
                     writer.add_scalar('next phase/' + str(episode), l_p, t)
-                # if goal is not None:
-                #     # writer.add_scalar('advice speed/' + str(episode), goal, t)
-                #     print(goal * env.max_speed)
+                if goal is not None:
+                    writer.add_scalar('advice speed/' + str(episode), goal * env.max_speed, t)
+                    # print(goal * env.max_speed)
                 if v_a is not None:
                     writer.add_scalar('head CAV action/' + str(episode), v_a, t)
                     writer.add_scalar('head CAV acc_real/' + str(episode), real_a, t)

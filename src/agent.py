@@ -26,6 +26,7 @@ class IndependentLightAgent:
             self.network = TD3Single(config, 'time')
         else:   # only phase or neither
             self.network = TD3Single(config, 'phase')
+            # self.network = DQN(config, 'phase')
         self.save = self.network.save
         if self.load_model:
             self.network.load('../model/' + config['load_model_name'] + '/light_agent_' + light_id + '_ep_99')
@@ -49,11 +50,9 @@ class IndependentLightAgent:
         self.step_time_obs = deque([[0] * self.o_t for _ in range(self.T_t)], maxlen=self.T_t)
         self.o_t_list = deque(maxlen=2)
         self.a_t_list = deque(maxlen=2)
-        # self.a_t_list = deque([[0.]], maxlen=2)
         self.step_phase_obs = deque([[0] * self.o_p for _ in range(self.T_p)], maxlen=self.T_p)
         self.o_p_list = deque(maxlen=2)
         self.a_p_list = deque(maxlen=2)
-        # self.a_p_list = deque([[.25, .25, .25, .25]], maxlen=2)
         self.reward_list = []
 
     @property
@@ -84,7 +83,7 @@ class IndependentLightAgent:
                 if not self.lstm_observe_every_step:
                     o_t = np.eye(4)[int(self.phase_list[-1])].tolist() + env.get_light_obs(self.light_id)
                     self.step_time_obs.append(o_t)  # 存近10步obs(T, o_dim)
-                    o_p = env.get_light_obs(self.light_id)
+                    o_p = np.eye(4)[int(self.phase_list[-1])].tolist() + env.get_light_obs(self.light_id)
                     self.step_phase_obs.append(o_p)
 
                 # Choose next phase
@@ -167,11 +166,9 @@ class IndependentLightAgent:
         self.step_time_obs = deque([[0] * self.o_t for _ in range(self.T_t)], maxlen=self.T_t)
         self.o_t_list = deque(maxlen=2)
         self.a_t_list = deque(maxlen=2)
-        # self.a_t_list = deque([[0.]], maxlen=2)
         self.step_phase_obs = deque([[0] * self.o_p for _ in range(self.T_p)], maxlen=self.T_p)
         self.o_p_list = deque(maxlen=2)
         self.a_p_list = deque(maxlen=2)
-        # self.a_p_list = deque([[.25, .25, .25, .25]], maxlen=2)
 
         self.reward_list = []
 
@@ -193,14 +190,14 @@ class ManagerLightAgent:
             self.network = HATD3Triple(config)  # tpg
         elif not self.use_time and not self.use_phase:
             self.light_opt = 'neither'
-            self.network = ManagerTD3(config['vehicle'])
+            self.network = ManagerTD3(config)
         else:
             self.light_opt = 'phase' if self.use_phase else 'time'
             self.network = HATD3Double(config, self.light_opt)
 
         self.save = self.network.save
         if self.load_model:
-            self.network.load('../model/' + config['load_model_name'] + '/light_agent_' + light_id + '_ep_69')
+            self.network.load('../model/' + config['load_model_name'] + '/light_agent_' + light_id + '_ep_99')
 
         self.var = config['var']
         self.o_t = config['time']['obs_dim']
@@ -233,7 +230,7 @@ class ManagerLightAgent:
         self.o_g_list = deque(maxlen=2)
         self.a_g_list = deque(maxlen=2)
         self.reward_list = []
-        self.accumulate_reward_manager = 0
+        self.accumulate_reward_manager = []
 
     @property
     def pointer(self):
@@ -254,7 +251,7 @@ class ManagerLightAgent:
         # goal只看变灯时刻状态不合理，应该每秒都看
         o_g = np.eye(4)[int(self.phase_list[-1])].tolist() + env.get_goal_obs(self.light_id) + [remain_green]
         self.step_goal_obs.append(o_g)
-        self.accumulate_reward_manager += env.get_manager_fluency_reward(self.light_id)
+        self.accumulate_reward_manager.append(env.get_manager_fluency_reward(self.light_id))
 
         next_green, next_phase, vehicle_goal = None, None, None
         if self.time_index == 0:
@@ -330,23 +327,19 @@ class ManagerLightAgent:
                 vehicle_goal = advice_speed
 
                 reward = env.get_light_reward(self.light_id)
+
+                g_reward = sum(self.accumulate_reward_manager) / len(self.accumulate_reward_manager) if len(
+                    self.accumulate_reward_manager) > 0 else 0
+                self.accumulate_reward_manager = []
+
+                reward += g_reward
                 self.reward_list.append(reward)
-
-                g_reward = self.accumulate_reward_manager / 25
-                self.accumulate_reward_manager = 0
-
-                self.reward_list[-1] += g_reward
-                # if self.light_opt != 'neither':
-                #     lane1, lane2 = env.get_ctrl_lane_id(self.light_id, None, curr_phase=True)
-                #     reward_cav = (env.get_manager_CoTV_reward(lane1) + env.get_manager_CoTV_reward(lane2)) / 2
-                #     reward = reward + reward_cav    # attention here!
-                #     self.reward_list[-1] = reward
 
                 worker_obs, worker_act = self.get_worker_oa()
                 if self.light_opt == 'both':    # 3Actor
                     if len(self.o_t_list) >= 2 and len(self.o_p_list) >= 2 and len(self.o_g_list) >= 2:
                         self.network.store_transition(self.o_t_list[-2], self.o_p_list[-2], self.o_g_list[-2],
-                                                      self.a_t_list[-2], self.a_p_list[-2], self.a_g_list[-2], self.reward_list[-1],
+                                                      self.a_t_list[-2], self.a_p_list[-2], self.a_g_list[-2], reward,
                                                       self.o_t_list[-1], self.o_p_list[-1], self.o_g_list[-1])
                 elif self.light_opt == 'time':
                     if len(self.o_t_list) >= 2 and len(self.o_g_list) >= 2:
@@ -359,30 +352,13 @@ class ManagerLightAgent:
                                                       self.a_p_list[-2], self.a_g_list[-2], reward,
                                                       self.o_p_list[-1], self.o_g_list[-1])
                 else:   # self.light_opt == 'neither':   # only goalTD3
-                    # # lane1, lane2 = env.get_ctrl_lane_id(self.light_id, None, curr_phase=True)
-                    # reward_manager = 0
-                    # for lane in env.light_get_lane(self.light_id):
-                    #     reward_manager += env.get_manager_CoTV_reward(lane)
-                    # reward_manager /= 8
-                    # # reward_cav = (env.get_manager_CoTV_reward(lane1) + env.get_manager_CoTV_reward(lane2)) / 2
-                    # reward = reward / 2 + reward_manager * 2
-                    # # reward = reward_manager * 2
-
-                    reward = self.accumulate_reward_manager / 25
-                    self.accumulate_reward_manager = 0
-
-                    self.reward_list[-1] = reward
                     if len(self.o_g_list) >= 2:
-                        # self.network.store_transition(self.o_g_list[-2], self.a_g_list[-2], reward, self.o_g_list[-1])
                         self.network.store_transition(self.o_g_list[-2], self.a_g_list[-2], reward, self.o_g_list[-1],
                                                       worker_obs, worker_act)
 
                 if self.train_model and self.pointer >= self.learn_begin:
                     self.var = max(0.01, self.var * 0.99)  # 0.9-40 0.99-400 0.999-4000
-                    if self.light_opt == 'neither':
-                        self.network.learn(self.worker_choose_action)
-                    else:
-                        self.network.learn()
+                    self.network.learn(self.worker_choose_action)
 
                 if self.phase_list[-2] == self.phase_list[-1]:
                     skip_yr = self.yellow + self.red + self.green
@@ -412,7 +388,7 @@ class ManagerLightAgent:
         self.a_g_list = deque(maxlen=2)
 
         self.reward_list = []
-        self.accumulate_reward_manager = 0
+        self.accumulate_reward_manager = []
 
 
 """
@@ -458,7 +434,7 @@ class IndependentCavAgent:
         next_acc, real_a = None, None
 
         if self.use_CAV:
-            curr_cav = env.get_head_cav_id(self.light_id, self.next_phase, curr_phase=not self.ctrl_all_lane)
+            curr_cav = env.light_get_head_cav(self.light_id, self.next_phase, curr_phase=not self.ctrl_all_lane)
             self.ctrl_cav.append(curr_cav)
 
             if next_phase is not None:    # 说明上层切相位了，接下来是一对新车道的yrg
@@ -579,13 +555,13 @@ class WorkerCavAgent:
         next_acc, real_a = None, None
 
         if self.use_CAV:
-            curr_headcav = env.get_head_cav_id(self.light_id, self.next_phase, curr_phase=not self.ctrl_all_lane)
+            curr_headcav = env.light_get_head_cav(self.light_id, self.next_phase, curr_phase=not self.ctrl_all_lane)
             curr_cav = []
             for lane in env.light_get_lane(self.light_id):
-                curr_cav += env.get_cav_id_from_lane(lane, head_only=False)
+                curr_cav += env.lane_get_cav(lane, head_only=False)
             self.ctrl_cav.append(curr_cav)
 
-            curr_lane = env.get_ctrl_lane_id(self.light_id, self.next_phase, curr_phase=not self.ctrl_all_lane)
+            curr_lane = env.light_get_ctrl_lane(self.light_id, self.next_phase, curr_phase=not self.ctrl_all_lane)
             if goal is not None:    # 说明上层切相位了，接下来是一对新车道的yrg
                 self.lane_speed = deque([[env.lane_get_speed(lane) / env.max_speed for lane in curr_lane]], maxlen=2)
                 self.goal = deque([goal.tolist()], maxlen=2)
@@ -627,9 +603,8 @@ class WorkerCavAgent:
                     cav_obs = self.trans_buffer[cav_id]['obs']
                     if len(cav_obs) >= self.T:  # 没存满就先不控制
                         # g_v = self.goal[-1][self.ctrl_cav[-1].index(cav_id)]  # goal is advice_lane_speed_delta
-                        g_v = self.goal[-1][curr_lane.index(env.traci.vehicle.getLaneID(cav_id))]  # goal is advice_lane_speed_delta  #############
+                        g_v = self.goal[-1][curr_lane.index(env.cav_get_lane(cav_id))]  # goal is advice_lane_speed_delta  #############
                         self.trans_buffer[cav_id]['goal'].append(g_v)
-                        int_reward = -np.sqrt(np.sum(g_v ** 2))
 
                         if self.train_model:  # 加噪声
                             if self.pointer < self.learn_begin and not self.load_model:  # 随机填充
@@ -639,34 +614,13 @@ class WorkerCavAgent:
                             a_v = np.clip(np.random.normal(0, self.var, size=a_v.shape) + a_v, -1, 1)
                         else:
                             a_v = self.network.choose_action(cav_obs[-self.T:], g_v)
-
-                        # # crazy
-                        # for mengkong in env.cav_get_cav_in_same_lane(cav_id):
-                        #     if mengkong:    # 只有不是None时才控制
-                        #         tmp_o = env.get_head_cav_obs(mengkong)
-                        #         if self.train_model:  # 加噪声
-                        #             if self.pointer < self.learn_begin and not self.load_model:  # 随机填充
-                        #                 tmp_a = np.random.random(self.network.a_dim) * 2 - 1
-                        #             else:
-                        #                 tmp_a = self.network.choose_action(tmp_o, g_v)
-                        #             tmp_a = np.clip(np.random.normal(0, self.var, size=tmp_a.shape) + tmp_a, -1, 1)
-                        #         else:
-                        #             tmp_a = self.network.choose_action(tmp_o, g_v)
-                        #         env.set_head_cav_action(mengkong, tmp_o[1], tmp_a[0])   # 黑户只控不存
-                        #         # if self.train_model and len(cav_obs) >= self.T + 1:
-                        #         #     self.network.store_transition(np.array(tmp_o).flatten(),
-                        #         #                                   tmp_o[2],
-                        #         #                                   self.trans_buffer[cav_id]['goal'][-2],
-                        #         #                                   self.trans_buffer[cav_id]['goal'][-1],    # next_goal
-                        #         #                                   int_reward,
-                        #         #                                   np.array(cav_obs[-self.T:]).flatten())
-
                         self.trans_buffer[cav_id]['action'].append(a_v)
                         a_v_for_manager = a_v[0]
                         next_acc = a_v[0]    # [-1,1]
                         real_a = cav_obs[-1][2]    # [-?,1]
                         self.trans_buffer[cav_id]['real_acc'].append(real_a)   # 获取的是上一时步的实际acc
 
+                        int_reward = -np.sqrt(np.sum(g_v ** 2))
                         ext_reward = env.get_cav_reward(cav_obs[-1], self.trans_buffer[cav_id]['real_acc'][-2],
                                                         self.trans_buffer[cav_id]['action'][-2]) if len(cav_obs) >= 1 + self.T else 0
                         reward = (1 - self.alpha) * ext_reward + self.alpha * int_reward
@@ -765,14 +719,14 @@ class LoyalCavAgent:
         next_acc, real_a = None, None
 
         if self.use_CAV:
-            curr_headcav = env.get_head_cav_id(self.light_id, self.next_phase, curr_phase=not self.ctrl_all_lane)
+            curr_headcav = env.light_get_head_cav(self.light_id, self.next_phase, curr_phase=not self.ctrl_all_lane)
             curr_cav = []
             for lane in env.light_get_lane(self.light_id):
-                curr_cav += [_ for _ in env.traci.lane.getLastStepVehicleIDs(lane)]
+                curr_cav += env.lane_get_cav(lane, head_only=False)
             # curr_cav = env.get_head_cav_id(self.light_id, self.next_phase, curr_phase=not self.ctrl_all_lane)
             self.ctrl_cav.append(curr_cav)
 
-            curr_lane = env.get_ctrl_lane_id(self.light_id, self.next_phase, curr_phase=not self.ctrl_all_lane)
+            curr_lane = env.light_get_ctrl_lane(self.light_id, self.next_phase, curr_phase=not self.ctrl_all_lane)
             if goal is not None:    # 说明上层切相位了，接下来是一对新车道的yrg
                 self.lane_speed = deque([[env.lane_get_speed(lane) / env.max_speed for lane in curr_lane]], maxlen=2)
                 self.goal = deque([goal.tolist()], maxlen=2)
@@ -814,11 +768,10 @@ class LoyalCavAgent:
                     cav_obs = self.trans_buffer[cav_id]['obs']
                     if len(cav_obs) >= self.T:  # 没存满就先不控制
                         # g_v = self.goal[-1][self.ctrl_cav[-1].index(cav_id)]  # goal is advice_lane_speed_delta
-                        g_v = self.goal[-1][curr_lane.index(
-                            env.traci.vehicle.getLaneID(cav_id))]  # goal is advice_lane_speed_delta  #############
+                        g_v = self.goal[-1][curr_lane.index(env.cav_get_lane(cav_id))]
 
-                        env.set_lane_act_speed(cav_id, g_v)
-                        for mengkong in env.cav_get_cav_in_same_lane(cav_id):
+                        # env.set_lane_act_speed(cav_id, g_v)
+                        for mengkong in env.lane_get_all_car(env.cav_get_lane(cav_id)):
                             if mengkong:    # 只有不是None时才控制
                                 env.set_lane_act_speed(mengkong, g_v)
 
@@ -828,10 +781,6 @@ class LoyalCavAgent:
 
             self.for_manager['obs'].append(curr_all_lane_obs)
             self.for_manager['act'].append(curr_all_lane_act)
-
-            if self.train_model and self.pointer >= self.learn_begin:
-                self.var = max(0.01, self.var * 0.999)  # 0.9-40 0.99-400 0.999-4000
-                self.network.learn()
 
         return (real_a, next_acc) if not real_a or not next_acc else (real_a * env.max_acc, next_acc * env.max_acc)
 

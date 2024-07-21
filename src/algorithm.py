@@ -283,6 +283,7 @@ class CriticDouble(nn.Module):  # 定义 critic 网络结构
 # for tg/pg
 class HATD3Double:
     def __init__(self, cfg, light_opt):    # l对应time，v对应phase，懒得改变量名了，就这吧
+        self.use_opc = cfg['use_opc']
         self.o1_dim = cfg[light_opt]['obs_dim']       # 单步观测维度
         self.s1_dim = cfg[light_opt]['state_dim']     # LSTM输出维度
         self.a1_dim = cfg[light_opt]['act_dim']       # 动作维度
@@ -350,7 +351,7 @@ class HATD3Double:
         obs = torch.FloatTensor(o2).view(1, -1, self.o2_dim).to(device)
         return self.actor2(obs).cpu().data.numpy().flatten()
 
-    def learn(self):
+    def learn(self, worker_policy):
         self.total_it += 1
         # mini batch sample
         indices = np.random.choice(min(self.pointer, self.memory_capacity), size=self.batch_size)   # 注意，这里是默认有放回
@@ -564,7 +565,43 @@ class CriticTriple(nn.Module):  # 定义 critic 网络结构
 
 
 class HATD3Triple:
+    class ReplayBuffer:
+        def __init__(self, capacity, obs_dim, act_dim):
+            self.capacity = capacity
+            worker_obs_dim, worker_act_dim = 8, 1
+            # self.memory = np.zeros((self.memory_capacity, self.obs_dim * 2 + self.a_dim + 1))
+            self.buffer = {
+                'obs': np.zeros((capacity, obs_dim), dtype=np.float32),
+                'next_obs': np.zeros((capacity, obs_dim), dtype=np.float32),
+                'action': np.zeros((capacity, act_dim), dtype=np.float32),  # goal_dim
+                'reward': np.zeros((capacity, 1), dtype=np.float32),
+                'worker_obs': [],
+                'worker_act': [],
+                # 'worker_obs': np.zeros((capacity, seq_len, 8, worker_obs_dim), dtype=np.float32),
+                # 'worker_act': np.zeros((capacity, seq_len, 8, worker_act_dim), dtype=np.float32),
+            }
+            self.pointer = 0
+
+        def store_transition(self, *args):
+            o, a, r, o_, wo, wa = args
+            index = self.pointer % self.capacity
+            self.buffer['obs'][index] = o
+            self.buffer['action'][index] = a
+            self.buffer['reward'][index] = r
+            self.buffer['next_obs'][index] = o_
+            # self.buffer['worker_obs'].append(wo)
+            # self.buffer['worker_act'].append(wa)
+            wo, wa = np.array(wo), np.array(wa)
+            self.buffer['worker_obs'][index] = wo
+            self.buffer['worker_act'][index] = wa
+
+            self.pointer += 1
+
+        def __getitem__(self, item):
+            return self.buffer[item]
+
     def __init__(self, cfg):    # l对应time，v对应phase，懒得改变量名了，就这吧
+        self.use_opc = cfg['use_opc']
         self.o1_dim = cfg['time']['obs_dim']       # 单步观测维度
         self.s1_dim = cfg['time']['state_dim']     # LSTM输出维度
         self.a1_dim = cfg['time']['act_dim']       # 动作维度
@@ -594,6 +631,8 @@ class HATD3Triple:
         self.learn_begin = self.memory_capacity * cfg['learn_start_ratio']   # 存满一定比例的记忆库之后开始学习并用网络输出动作
         self.memory = np.zeros((self.memory_capacity, self.obs_dim * 2 + self.act_dim + 1))
         self.pointer = 0
+        # self.memory = self.ReplayBuffer(self.memory_capacity, self.obs_dim, self.a_dim, 25)
+        # self.store_transition = self.memory.store_transition
 
         # 创建对应的四个网络
         self.actor1 = Actor(self.o1_dim, self.s1_dim, self.a1_dim, self.t1, cfg['actor_hidden_dim']).to(device)
@@ -651,7 +690,7 @@ class HATD3Triple:
         obs = torch.FloatTensor(o3).view(1, -1, self.o3_dim).to(device)
         return self.actor3(obs).cpu().data.numpy().flatten()
 
-    def learn(self):
+    def learn(self, worker_policy):
         self.total_it += 1
         # mini batch sample
         indices = np.random.choice(min(self.pointer, self.memory_capacity), size=self.batch_size)   # 注意，这里是默认有放回
@@ -797,6 +836,7 @@ class ManagerCritic(nn.Module):  # 定义 critic 网络结构
         return q
 
 
+# only for G
 class ManagerTD3:
     class ReplayBuffer:
         def __init__(self, capacity, obs_dim, act_dim, seq_len):
@@ -837,10 +877,12 @@ class ManagerTD3:
             return self.buffer[item]
 
     def __init__(self, cfg):   # opt = 'time' or 'phase'
-        self.o_dim = cfg['obs_dim']    # 单步观测维度
-        self.a_dim = cfg['act_dim']    # 动作维度
-        self.s_dim = cfg['state_dim']  # LSTM输出维度
-        self.t = cfg['T']
+        self.use_opc = cfg['use_opc']
+        self.o_dim = cfg['vehicle']['obs_dim']    # 单步观测维度
+        self.a_dim = cfg['vehicle']['act_dim']    # 动作维度
+        self.s_dim = cfg['vehicle']['state_dim']  # LSTM输出维度
+        self.t = cfg['vehicle']['T']
+        hidden_dim = cfg['vehicle']['hidden_dim']
 
         self.obs_dim = self.o_dim * self.t
         self.choose_goal = self.choose_action      # 方便外部调用
@@ -857,15 +899,15 @@ class ManagerTD3:
         self.store_transition = self.memory.store_transition
 
         # 创建对应的四个网络
-        self.actor = Actor(self.o_dim, self.s_dim, self.a_dim, self.t, cfg['hidden_dim']).to(device)
-        self.actor_target = Actor(self.o_dim, self.s_dim, self.a_dim, self.t, cfg['hidden_dim']).to(device)
+        self.actor = Actor(self.o_dim, self.s_dim, self.a_dim, self.t, hidden_dim).to(device)
+        self.actor_target = Actor(self.o_dim, self.s_dim, self.a_dim, self.t, hidden_dim).to(device)
         self.actor_target.load_state_dict(self.actor.state_dict())  # 存储网络名字和对应参数
         self.actor_optimizer = torch.optim.Adam(self.actor.parameters(), lr=cfg['actor_learning_rate'])
         self.scheduler_actor = torch.optim.lr_scheduler.StepLR(self.actor_optimizer,
                                                                step_size=cfg['actor_scheduler_step'], gamma=0.5)
 
-        self.critic = ManagerCritic(self.o_dim, self.s_dim, self.a_dim, self.t, cfg['hidden_dim']).to(device)
-        self.critic_target = ManagerCritic(self.o_dim, self.s_dim, self.a_dim, self.t, cfg['hidden_dim']).to(device)
+        self.critic = ManagerCritic(self.o_dim, self.s_dim, self.a_dim, self.t, hidden_dim).to(device)
+        self.critic_target = ManagerCritic(self.o_dim, self.s_dim, self.a_dim, self.t, hidden_dim).to(device)
         self.critic_target.load_state_dict(self.critic.state_dict())
         self.critic_optimizer = torch.optim.Adam(self.critic.parameters(), lr=cfg['critic_learning_rate'])
         self.scheduler_critic = torch.optim.lr_scheduler.StepLR(self.critic_optimizer,
@@ -952,7 +994,6 @@ class ManagerTD3:
             # 计算候选目标下的动作
             policy_actions = np.zeros((ncands, new_batch_sz) + action_dim)  # (10, b*seq*lane, wa=1)
             for c in range(ncands):
-                # TODO:
                 subgoal = candidates[:, c]  # (batch, lane=8)
                 # (batch_size, 1, self.a_dim) - (batch_size, seq_len, self.a_dim) = (batch_size, seq_len, self.a_dim)   #
                 candidate = (subgoal + states[:, 0, -gdim:])[:, None] - states[:, :, -gdim:]  #
@@ -976,7 +1017,6 @@ class ManagerTD3:
             difference = difference.reshape((ncands, batch_size, seq_len) + action_dim).transpose(1, 0, 2, 3)  # !
 
             # difference = difference.reshape((ncands, batch_size, seq_len, 8)).transpose(1, 0, 2, 3)
-            # TODO: 原版是上层出的动作全量作用到下层，但我这里上层虽然每次同时出8个goal，但opc时应该分别看待给每个车道的goal。目前版本没有考虑
 
             # 计算差异的对数概率
             logprob = -0.5 * np.sum(np.linalg.norm(difference, axis=-1) ** 2,
@@ -997,8 +1037,8 @@ class ManagerTD3:
         # mini batch sample
 
         indices = np.random.choice(min(self.pointer, self.memory_capacity), size=self.batch_size)   # 注意，这里是默认有放回
-        # batch_trans = self.memory[indices, :]
 
+        # batch_trans = self.memory[indices, :]
         # obs = torch.FloatTensor(batch_trans[:, :self.obs_dim]).to(device)
         # action = torch.FloatTensor(batch_trans[:, self.obs_dim: self.obs_dim + self.a_dim]).to(device)
         # reward = torch.FloatTensor(batch_trans[:, -self.obs_dim - 1: -self.obs_dim]).to(device)
@@ -1008,13 +1048,14 @@ class ManagerTD3:
         reward = torch.FloatTensor(self.memory['reward'][indices]).to(device)
 
         ori_action = self.memory['action'][indices]
-        action = torch.FloatTensor(ori_action).to(device)
-
-        # worker_obs = self.memory['worker_obs'][indices]
-        # worker_act = self.memory['worker_act'][indices]
-        # corrected_action = self.off_policy_corrections(worker_policy, ori_action, worker_obs, worker_act)
-        # # print('\n,ori:', ori_action, '\nnew:', corrected_action)
-        # action = torch.FloatTensor(corrected_action).to(device)
+        if not self.use_opc:
+            action = torch.FloatTensor(ori_action).to(device)
+        else:
+            worker_obs = self.memory['worker_obs'][indices]
+            worker_act = self.memory['worker_act'][indices]
+            corrected_action = self.off_policy_corrections(worker_policy, ori_action, worker_obs, worker_act)
+            # print('\n,ori:', ori_action, '\nnew:', corrected_action)
+            action = torch.FloatTensor(corrected_action).to(device)
 
         with torch.no_grad():
             noise = (torch.randn_like(action) * 0.2).clamp(-0.5, 0.5)       # noise=0.2, clip=0.5

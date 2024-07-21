@@ -1,10 +1,21 @@
 import os
 import json
+import copy
 import numpy as np
 import pandas as pd
 
 
 np.random.seed(1)  # 设置随机种子
+
+
+def change_dict(old_dict, change):
+    new_dict = copy.deepcopy(old_dict)
+    for key, value in change.items():
+        if isinstance(value, dict) and key in new_dict and isinstance(new_dict[key], dict):
+            new_dict[key] = change_dict(new_dict[key], value)
+        else:
+            new_dict[key] = value
+    return new_dict
 
 
 def xls_read(filename: str) -> np.array:
