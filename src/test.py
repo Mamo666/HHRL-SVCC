@@ -1,12 +1,13 @@
 
 # -*- coding:utf-8 -*-
 import time
+
 from torch.utils.tensorboard import SummaryWriter
 
 import utils
-from environment import Environment
 from agent import IndependentLightAgent, ManagerLightAgent, IndependentCavAgent, WorkerCavAgent
 from configs import env_configs, get_agent_configs
+from environment import Environment
 
 env_configs['single']['sumocfg_path'] = '../sumo_sim_env/collision_env_tmp.sumocfg'    # 防止两边同时运行修改时撞车
 to_be_tested = '0718_new_rou'

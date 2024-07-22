@@ -25,8 +25,8 @@ env_configs = {
         'time_step': 1,  # 仿真步长为1s
 
         # 文件路径设置
-        # 'sumocfg_path': '../sumo_sim_env/collision_env.sumocfg',    # 从代码到env.sumocfg的路径
-        'sumocfg_path': '../sumo_sim_env/env.sumocfg',    # 从代码到env.sumocfg的路径
+        'sumocfg_path': '../sumo_sim_env/collision_env.sumocfg',    # 从代码到env.sumocfg的路径
+        # 'sumocfg_path': '../sumo_sim_env/env.sumocfg',    # 从代码到env.sumocfg的路径      # NOTE: 注意检查碰撞是否处理, 不处理collision始终为0
         'rou_path': 'single/new/',
         'net_path': 'single/no_lane_change.net.xml',  # 路网文件只会有一个,故写全
     },
@@ -54,13 +54,13 @@ env_configs = {
 
 
 light_configs = {
-    'use_opc': False,   # 注意，目前还没实现tg/pg/tpg的opc，只有G能用
+    'use_opc': False,   # 注意，目前还没实现tg/pg/tpg的opc，只有G能用        # NOTE: 注意检查是否启用OPC，以及所用的方案是否能正确OPC
     'use_time': True,   # 不用HATD3则用TD3
     'use_phase': True,
-    'phase_agent': 'DQN',   # 'DQN'/'TD3'
+    'phase_agent': 'DQN',   # 'DQN'/'TD3'   # here,暂时不实现DQN
     'train_model': True,
     'load_model_name': None,
-    'lstm_observe_every_step': True,
+    'lstm_observe_every_step': True,        # here，基本废弃该参数
 
     'time': {
         'obs_dim': 4 + 4 + 4,   # 路口智能体的状态维度 [下一相位one-hot, 各相位车辆数, 各相位排队数]
@@ -82,7 +82,7 @@ light_configs = {
         'obs_dim': 4 + 8 + 3*8 + 1,  # 路口智能体的状态维度 [下一相位，各车道当前平均车速，各车道头车xva，时间（即另外两actor动作）]
         'state_dim': 32,  # RNN层的输出维度
         'act_dim': 8,       # 速度建议智能体的动作空间 [路口控制车道数]
-        'T': env_configs['yellow'] + env_configs['red'] + env_configs['min_green'],
+        'T': env_configs['yellow'] + env_configs['red'] + env_configs['min_green'],     # here, T后面可以看情况修改
         'hidden_dim': [400, 300],  # actor和critic网络隐藏层维度一样。
     },
 
@@ -96,9 +96,9 @@ light_configs = {
     'tau': 0.005,  # 软更新参数
     'gamma': 0.95,  # .95  20步
     'batch_size': 64,  # 批大小
-    'memory_capacity': 20000,
-    'learn_start_ratio': 0.1,
-    # 'learn_start_ratio': 0.05,
+    'memory_capacity': 20000,                                           # NOTE: 注意检查开始学习的时机
+    # 'learn_start_ratio': 0.1,
+    'learn_start_ratio': 0.05,
     # 'learn_start_ratio': 0.15,
     'actor_hidden_dim': [400, 300],
     'critic_hidden_dim': [512, 256],
@@ -119,7 +119,7 @@ CAV_configs = {
         'obs_dim': 5 + 2 + 1,   # 车辆智能体的状态维度 [与前车距离、与前车速度差、与路口距离、当前车速、当前加速度、信号灯指示符、倒计时、平均车速]
         'state_dim': 32,   # LSTM输出维度   # !16!
         'act_dim': 1,    # 车辆智能体的动作空间 [决定车辆加速度的大小]
-        'T': 1,    # 不宜设置过大，因为要攒够这么多步的obs才能开始决策和学习
+        'T': 1,    # 不宜设置过大，因为要攒够这么多步的obs才能开始决策和学习  # Here, 测试时T基本上都设为1
         'hidden_dim': [128, 128],  # actor和critic网络隐藏层维度一样。
     },
     'goal_dim': 1,         # 目标维度
@@ -127,14 +127,14 @@ CAV_configs = {
 
     'batch_size': 64,       # 批大小
     'memory_capacity': 40000,    # fixed goal 7
-    'learn_start_ratio': 0.2,    # fixed goal
+    'learn_start_ratio': 0.2,    # fixed goal                                           # NOTE: 注意检查开始学习的时机
     # 'memory_capacity': 120000,    # fixed goal 14
     # 'learn_start_ratio': 0.4,    # fixed goal
     'gamma': 0.9,           # 比路灯短视! 10步
     'tau': 0.005,           # 软更新参数
     # 'alpha': 0.5,             # 内在奖励权重,为0则不考虑上层，为1则忠心耿耿
     # 'alpha': 0.2,             # 内在奖励权重,为0则不考虑上层，为1则忠心耿耿
-    'alpha': 0.95,             # 内在奖励权重,为0则不考虑上层，为1则忠心耿耿
+    'alpha': 0.95,             # 内在奖励权重,为0则不考虑上层，为1则忠心耿耿                    # NOTE: 注意检查alpha
     'actor_learning_rate': 0.0001,
     'critic_learning_rate': 0.001,
     'actor_scheduler_step': 2000,   # !

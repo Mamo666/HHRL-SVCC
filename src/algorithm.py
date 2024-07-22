@@ -1,9 +1,10 @@
 
+import copy
+
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import numpy as np
-import copy
 
 torch.cuda.manual_seed(3407)
 torch.manual_seed(3407)

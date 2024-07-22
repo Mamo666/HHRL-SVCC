@@ -490,11 +490,12 @@ class Environment:
         """控制完成后，恢复默认的跟车模型"""
         traci.vehicle.setSpeed(cav_id, -1)
 
-    def set_lane_act_speed(self, cav_id, delta_v):
-        """将cav的加速度设置为给定值"""
-        exact_speed = delta_v * self.max_speed + self.lane_get_speed(traci.vehicle.getLaneID(cav_id))
+    @staticmethod
+    def set_lane_act_speed(cav_id, next_speed):
+        """将cav的加速度设置为给定值, 仅供Loyal使用"""
+        # exact_speed = delta_v * self.max_speed + self.lane_get_speed(traci.vehicle.getLaneID(cav_id))
+        # next_speed = max(0, min(exact_speed, self.max_speed))
         traci.vehicle.setSpeedMode(cav_id, 1110)
-        next_speed = max(0, min(exact_speed, self.max_speed))
         traci.vehicle.setSpeed(cav_id, next_speed)
 
 

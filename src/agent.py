@@ -3,8 +3,10 @@
 [T/P/tp/TP] [Gv/tgv/pgv/tpgv] [V/TV/PV/tpV]    # tpg:HATD3,v:worker,TPGV:TD3
 """
 
-import numpy as np
 from collections import deque
+
+import numpy as np
+
 from algorithm import HATD3Triple, HATD3Double, HATD3, TD3Single, WorkerTD3, ManagerTD3
 
 np.random.seed(3407)  # 设置随机种子
@@ -323,8 +325,8 @@ class ManagerLightAgent:
                 else:
                     a_g = self.network.choose_goal(o_g)
                 self.a_g_list.append(a_g)
-                advice_speed = (a_g + 1) / 2    # [-1,1]
-                vehicle_goal = advice_speed
+                # advice_speed = (a_g + 1) / 2    # [0,1]           ##################################错误地弄成了0,1
+                vehicle_goal = a_g
 
                 reward = env.get_light_reward(self.light_id)
 
@@ -551,7 +553,7 @@ class WorkerCavAgent:
         self.for_manager = {'obs': [], 'act': []}
         return obs_seq, act_seq
 
-    def step(self, env, goal, next_phase):
+    def step(self, env, goal: np.ndarray, next_phase):
         next_acc, real_a = None, None
 
         if self.use_CAV:
@@ -672,33 +674,20 @@ class WorkerCavAgent:
 class LoyalCavAgent:
     def __init__(self, light_id, config):
         self.light_id = light_id
-        self.ctrl_all_lane = not config['only_ctrl_curr_phase']
-        self.ctrl_lane_num = 8 if self.ctrl_all_lane else 2  # 每个时刻控制的入口车道数。每一时刻都控制所有方向的车道
 
         self.network = WorkerTD3(config)
-        self.save = self.network.save
+        self.save = lambda path: print('Loyal Agent no need to save')
 
         self.use_CAV = config['use_CAV']
         self.train_model = config['train_model']
         self.load_model = config['load_model_name'] is not None
-        if self.load_model:
-            self.network.load('../model/' + config['load_model_name'] + '/cav_agent_' + light_id + '_ep_99')
 
         self.var = config['var']
         self.T = config['cav']['T']
-        self.alpha = config['alpha']
 
-        self.ctrl_cav = deque([[None] * self.ctrl_lane_num], maxlen=2)
-        self.lane_speed = deque([[1.] * self.ctrl_lane_num], maxlen=2)
-        self.goal = deque([], maxlen=2)
-        self.next_phase = 1
-
-        self.trans_buffer = {}
-        self.ext_reward_list = []
-        self.int_reward_list = []
+        self.last_car_list = []
         self.reward_list = []
-        self.action_dict = {}
-        self.real_acc_dict = {}
+        self.target_speed = []
         self.for_manager = {'obs': [], 'act': []}
 
     @property
@@ -719,81 +708,36 @@ class LoyalCavAgent:
         next_acc, real_a = None, None
 
         if self.use_CAV:
-            curr_headcav = env.light_get_head_cav(self.light_id, self.next_phase, curr_phase=not self.ctrl_all_lane)
-            curr_cav = []
-            for lane in env.light_get_lane(self.light_id):
-                curr_cav += env.lane_get_cav(lane, head_only=False)
-            # curr_cav = env.get_head_cav_id(self.light_id, self.next_phase, curr_phase=not self.ctrl_all_lane)
-            self.ctrl_cav.append(curr_cav)
+            curr_car, curr_tar_v = [], []
+            for lid, lane in enumerate(env.light_get_lane(self.light_id)):  # 必控制所有车道所有车
+                lane_car = env.lane_get_all_car(lane)
+                curr_car.extend(lane_car)
+                lane_speed = env.lane_get_speed(lane) / env.max_speed
 
-            curr_lane = env.light_get_ctrl_lane(self.light_id, self.next_phase, curr_phase=not self.ctrl_all_lane)
-            if goal is not None:    # 说明上层切相位了，接下来是一对新车道的yrg
-                self.lane_speed = deque([[env.lane_get_speed(lane) / env.max_speed for lane in curr_lane]], maxlen=2)
-                self.goal = deque([goal.tolist()], maxlen=2)
-                self.next_phase = next_phase
-            else:
-                self.lane_speed.append([env.lane_get_speed(lane) / env.max_speed for lane in curr_lane])
-                # self.goal.append([self.lane_speed[-2][i] + self.goal[-1][i] - self.lane_speed[-1][i] for i in range(len(self.lane_speed[-1]))])
-                self.goal.append([max(min((self.lane_speed[-2][i] + self.goal[-1][i] - self.lane_speed[-1][i]), 1), -1) for i in range(len(self.lane_speed[-1]))]) # clip0719
-            # print(self.lane_speed[-1], '\t|\t', self.goal[-1])
+                if goal is not None:
+                    # 注意，worker中g_v是直接传入网络，每一步递推goal时goal值域始终是[-1,1]，而这里的需要直接根据v+dv算出上层实际希望各车道的车速，而车速不能为负
+                    target_v = max(min((goal[lid] + lane_speed), 1), 0) * env.max_speed
+                    curr_tar_v.append(target_v)
+                else:
+                    curr_tar_v.append(self.target_speed[lid])
 
-            # 对比两时刻头CAV，上时刻还有现在没了(可能切相位或驶出)的要reset一下跟驰
-            for cav_id in self.ctrl_cav[-2]:
-                if cav_id is not None and cav_id not in self.ctrl_cav[-1]:
-                    env.reset_head_cav(cav_id)
-                    self.ext_reward_list.append(self.trans_buffer[cav_id]['ext_reward'])
-                    self.int_reward_list.append(self.trans_buffer[cav_id]['int_reward'])
-                    self.reward_list.append(self.trans_buffer[cav_id]['reward'])
+                for car in lane_car:
+                    env.set_lane_act_speed(car, curr_tar_v[-1])
 
-                    del self.trans_buffer[cav_id]
+            self.target_speed = curr_tar_v if goal is not None else self.target_speed
 
-            curr_all_lane_obs, curr_all_lane_act = [], []   # 用于保存8车道头车的o & a
-            for cav_id in self.ctrl_cav[-1]:
-                o_v = env.get_head_cav_obs(cav_id)  # list
-                curr_all_lane_obs.append(o_v)
+            for vehicle in self.last_car_list:
+                if vehicle not in curr_car:
+                    env.reset_head_cav(vehicle)
+            self.last_car_list = curr_car
 
-                a_v_for_manager = -1
-                if cav_id:  # cav is not None
-                    if cav_id not in self.trans_buffer:  # == 0
-                        self.trans_buffer[cav_id] = {'obs': [o_v],  # 存储车辆每一步的obs
-                                                     'action': [],  # 每一步的action
-                                                     'real_acc': [],  # 每一步的action
-                                                     'goal': deque(maxlen=2),
-                                                     'ext_reward': [],
-                                                     'int_reward': [],
-                                                     'reward': []}
-                    else:  # >=1
-                        self.trans_buffer[cav_id]['obs'].append(o_v)
-
-                    cav_obs = self.trans_buffer[cav_id]['obs']
-                    if len(cav_obs) >= self.T:  # 没存满就先不控制
-                        # g_v = self.goal[-1][self.ctrl_cav[-1].index(cav_id)]  # goal is advice_lane_speed_delta
-                        g_v = self.goal[-1][curr_lane.index(env.cav_get_lane(cav_id))]
-
-                        # env.set_lane_act_speed(cav_id, g_v)
-                        for mengkong in env.lane_get_all_car(env.cav_get_lane(cav_id)):
-                            if mengkong:    # 只有不是None时才控制
-                                env.set_lane_act_speed(mengkong, g_v)
-
-                        # a_v_for_manager = a_v[0]
-
-                curr_all_lane_act.append([a_v_for_manager])
-
-            self.for_manager['obs'].append(curr_all_lane_obs)
-            self.for_manager['act'].append(curr_all_lane_act)
+        self.for_manager['obs'].append([[-1] * 8 for _ in range(8)])
+        self.for_manager['act'].append([[-1] for _ in range(8)])
 
         return (real_a, next_acc) if not real_a or not next_acc else (real_a * env.max_acc, next_acc * env.max_acc)
 
     def reset(self):
-        self.ctrl_cav = deque([[None] * self.ctrl_lane_num], maxlen=2)
-        self.lane_speed = deque([[1.] * self.ctrl_lane_num], maxlen=2)
-        self.goal = deque([], maxlen=2)
-        self.next_phase = 1
-
-        self.trans_buffer = {}
-        self.ext_reward_list = []
-        self.int_reward_list = []
+        self.last_car_list = []
         self.reward_list = []
-        self.action_dict = {}
-        self.real_acc_dict = {}
+        self.target_speed = []
         self.for_manager = {'obs': [], 'act': []}

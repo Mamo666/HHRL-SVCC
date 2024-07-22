@@ -1,13 +1,14 @@
 
 # -*- coding:utf-8 -*-
-import numpy as np
 import time
+
+import numpy as np
 from torch.utils.tensorboard import SummaryWriter
 
 import utils
-from environment import Environment
 from agent import IndependentLightAgent, ManagerLightAgent, IndependentCavAgent, WorkerCavAgent, LoyalCavAgent
 from configs import env_configs, get_agent_configs
+from environment import Environment
 
 np.random.seed(3407)  # 设置随机种子
 
@@ -78,9 +79,14 @@ def setting(base_key, change):
     return utils.change_dict(experience_cfg_base[base_key], {'modify_dict': change})
 
 
-experience_cfg = {'tpgv_noOPC_loyal_pretrain_manager': setting('tpgv', {}),
-                  'tpgv_noOPC_worker_pretrained_manager': setting('tpgv', {
-                      'light': {'load_model_name': '0718_new_rou/tpgv_noOPC_loyal_pretrain_manager'}})}
+experience_cfg = {
+    'Gv_noOPC_loyal_pretrain_manager': setting('Gv', {}),
+    'Gv_noOPC_worker_pretrained_manager': setting('Gv', {
+        'light': {'load_model_name': '0721_new_rou/Gv_noOPC_loyal_pretrain_manager'}}),
+    'tpgv_noOPC_loyal_pretrain_manager': setting('tpgv', {}),
+    'tpgv_noOPC_worker_pretrained_manager': setting('tpgv', {
+        'light': {'load_model_name': '0721_new_rou/tpgv_noOPC_loyal_pretrain_manager'}})
+}
 
 
 def launch_experiment(exp_cfg, save_model=True, single_flag=True):
