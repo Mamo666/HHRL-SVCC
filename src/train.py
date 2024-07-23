@@ -80,12 +80,20 @@ def setting(base_key, change):
 
 
 experience_cfg = {
-    'Gv_noOPC_loyal_pretrain_manager': setting('Gv', {}),
-    'Gv_noOPC_worker_pretrained_manager': setting('Gv', {
-        'light': {'load_model_name': '0721_new_rou/Gv_noOPC_loyal_pretrain_manager'}}),
-    'tpgv_noOPC_loyal_pretrain_manager': setting('tpgv', {}),
-    'tpgv_noOPC_worker_pretrained_manager': setting('tpgv', {
-        'light': {'load_model_name': '0721_new_rou/tpgv_noOPC_loyal_pretrain_manager'}})
+    # # Note：Done
+    # 'Gv_noOPC_loyal_pretrain_manager': setting('Gv', {}),
+    # 'Gv_noOPC_worker_pretrained_manager': setting('Gv', {
+    #     'light': {'load_model_name': '0721_new_rou/Gv_noOPC_loyal_pretrain_manager'}}),
+
+    # # Note：Doing
+    'V_all8cav': setting('V', {'cav': {'only_ctrl_head_cav': False}}),
+    'V_head8cav': setting('V', {'cav': {'only_ctrl_head_cav': True}}),
+    'V_all8cav_T2': setting('V', {'cav': {'only_ctrl_head_cav': False, 'cav': {'T': 2}}}),
+
+    # # Note: To do
+    # 'tpgv_noOPC_loyal_pretrain_manager': setting('tpgv', {}),
+    # 'tpgv_noOPC_worker_pretrained_manager': setting('tpgv', {
+    #     'light': {'load_model_name': '0721_new_rou/tpgv_noOPC_loyal_pretrain_manager'}})
 }
 
 

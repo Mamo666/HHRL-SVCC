@@ -403,6 +403,7 @@ class IndependentCavAgent:
         self.light_id = light_id
         self.ctrl_all_lane = not config['only_ctrl_curr_phase']
         self.ctrl_lane_num = 8 if self.ctrl_all_lane else 2  # 每个时刻控制的入口车道数。每一时刻都控制所有方向的车道
+        self.ctrl_all_cav = not config['only_ctrl_head_cav']
 
         self.use_CAV = config['use_CAV']
         self.train_model = config['train_model']
@@ -436,7 +437,13 @@ class IndependentCavAgent:
         next_acc, real_a = None, None
 
         if self.use_CAV:
-            curr_cav = env.light_get_head_cav(self.light_id, self.next_phase, curr_phase=not self.ctrl_all_lane)
+            curr_headcav = env.light_get_head_cav(self.light_id, self.next_phase, curr_phase=not self.ctrl_all_lane)
+            if self.ctrl_all_cav:
+                curr_cav = []
+                for lane in env.light_get_lane(self.light_id):
+                    curr_cav += env.lane_get_cav(lane, head_only=False)
+            else:
+                curr_cav = curr_headcav
             self.ctrl_cav.append(curr_cav)
 
             if next_phase is not None:    # 说明上层切相位了，接下来是一对新车道的yrg
@@ -448,8 +455,6 @@ class IndependentCavAgent:
                     env.reset_head_cav(cav_id)
                     self.reward_list.append(self.trans_buffer[cav_id]['reward'])
 
-                    # self.action_dict[cav_id] = np.array(self.trans_buffer[cav_id]['action']).flatten().tolist()
-                    # self.real_acc_dict[cav_id] =np.array(self.trans_buffer[cav_id]['real_acc']).flatten().tolist()
                     del self.trans_buffer[cav_id]
 
             for cav_id in self.ctrl_cav[-1]:
@@ -512,6 +517,7 @@ class WorkerCavAgent:
         self.light_id = light_id
         self.ctrl_all_lane = not config['only_ctrl_curr_phase']
         self.ctrl_lane_num = 8 if self.ctrl_all_lane else 2  # 每个时刻控制的入口车道数。每一时刻都控制所有方向的车道
+        self.ctrl_all_cav = not config['only_ctrl_head_cav']
 
         self.network = WorkerTD3(config)
         self.save = self.network.save
@@ -558,9 +564,12 @@ class WorkerCavAgent:
 
         if self.use_CAV:
             curr_headcav = env.light_get_head_cav(self.light_id, self.next_phase, curr_phase=not self.ctrl_all_lane)
-            curr_cav = []
-            for lane in env.light_get_lane(self.light_id):
-                curr_cav += env.lane_get_cav(lane, head_only=False)
+            if self.ctrl_all_cav:
+                curr_cav = []
+                for lane in env.light_get_lane(self.light_id):
+                    curr_cav += env.lane_get_cav(lane, head_only=False)
+            else:
+                curr_cav = curr_headcav
             self.ctrl_cav.append(curr_cav)
 
             curr_lane = env.light_get_ctrl_lane(self.light_id, self.next_phase, curr_phase=not self.ctrl_all_lane)
@@ -709,7 +718,7 @@ class LoyalCavAgent:
 
         if self.use_CAV:
             curr_car, curr_tar_v = [], []
-            for lid, lane in enumerate(env.light_get_lane(self.light_id)):  # 必控制所有车道所有车
+            for lid, lane in enumerate(env.light_get_lane(self.light_id)):  # 必控制所有车道所有车(无论是不是CAV)
                 lane_car = env.lane_get_all_car(lane)
                 curr_car.extend(lane_car)
                 lane_speed = env.lane_get_speed(lane) / env.max_speed

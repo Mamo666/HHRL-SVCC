@@ -113,7 +113,8 @@ CAV_configs = {
     'use_CAV': True,
     'train_model': True,
     'load_model_name': None,
-    'only_ctrl_curr_phase': False,  # 每时刻是只控制当前相位车道(T)还是控制所有车道(F)
+    'only_ctrl_curr_phase': False,  # 每时刻是只控制当前相位车道(T)还是控制所有车道(F)        # NOTE: 注意检查控制哪些车道
+    'only_ctrl_head_cav': False,  # 每个车道上只控制头车(T)还是所有CAV(F)                  # NOTE: 注意检查控制哪些CAV
 
     'cav': {
         'obs_dim': 5 + 2 + 1,   # 车辆智能体的状态维度 [与前车距离、与前车速度差、与路口距离、当前车速、当前加速度、信号灯指示符、倒计时、平均车速]
