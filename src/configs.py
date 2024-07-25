@@ -127,10 +127,10 @@ CAV_configs = {
     'hidden_dim': [128, 128],   # !
 
     'batch_size': 64,       # 批大小
-    'memory_capacity': 40000,    # fixed goal 7
-    'learn_start_ratio': 0.2,    # fixed goal                                           # NOTE: 注意检查开始学习的时机
-    # 'memory_capacity': 120000,    # fixed goal 14
-    # 'learn_start_ratio': 0.4,    # fixed goal
+    # 'memory_capacity': 40000,    # fixed goal 7
+    # 'learn_start_ratio': 0.2,    # fixed goal                                           # NOTE: 注意检查开始学习的时机
+    'memory_capacity': 120000,    # fixed goal 14
+    'learn_start_ratio': 0.4,    # fixed goal
     'gamma': 0.9,           # 比路灯短视! 10步
     'tau': 0.005,           # 软更新参数
     # 'alpha': 0.5,             # 内在奖励权重,为0则不考虑上层，为1则忠心耿耿

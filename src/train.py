@@ -84,11 +84,27 @@ experience_cfg = {
     # 'Gv_noOPC_loyal_pretrain_manager': setting('Gv', {}),
     # 'Gv_noOPC_worker_pretrained_manager': setting('Gv', {
     #     'light': {'load_model_name': '0721_new_rou/Gv_noOPC_loyal_pretrain_manager'}}),
+    # 'V_all8cav': setting('V', {'cav': {'only_ctrl_head_cav': False}}),
+    # 'V_head8cav': setting('V', {'cav': {'only_ctrl_head_cav': True}}),
+    # 'V_head8cav_T2': setting('V', {'cav': {'only_ctrl_head_cav': True, 'cav': {'T': 2}}}),
+    # 'V_all8cav_T2': setting('V', {'cav': {'only_ctrl_head_cav': False, 'cav': {'T': 2}}}),
 
     # # Note：Doing
-    'V_all8cav': setting('V', {'cav': {'only_ctrl_head_cav': False}}),
-    'V_head8cav': setting('V', {'cav': {'only_ctrl_head_cav': True}}),
-    'V_all8cav_T2': setting('V', {'cav': {'only_ctrl_head_cav': False, 'cav': {'T': 2}}}),
+    # 'Gv_noOPC_worker_pretrained_manager': setting('Gv', {
+    #     'light': {'train_model': False, 'load_model_name': '0721_new_rou/Gv_noOPC_loyal_pretrain_manager'},
+    #     'cav': {'alpha': 1.}}),
+    # 'Gv_noOPC_worker_pretrained_manager_head2cav__correct': setting('Gv', {
+    #     'light': {'train_model': False, 'load_model_name': '0721_new_rou/Gv_noOPC_loyal_pretrain_manager'},
+    #     'cav': {'alpha': 1., 'only_ctrl_curr_phase': True, 'only_ctrl_head_cav': True}}),  # memory size changed
+    # 'Gv_noOPC_worker_pretrained_manager_head8cav__correct': setting('Gv', {
+    #     'light': {'train_model': False, 'load_model_name': '0721_new_rou/Gv_noOPC_loyal_pretrain_manager'},
+    #     'cav': {'alpha': 1., 'only_ctrl_curr_phase': False, 'only_ctrl_head_cav': True}}),  # memory size changed
+    # 'Gv_noOPC_worker_pretrained_manager_head8cav_T2__correct': setting('Gv', {
+    #     'light': {'train_model': False, 'load_model_name': '0721_new_rou/Gv_noOPC_loyal_pretrain_manager'},
+    #     'cav': {'cav': {'T': 2}, 'alpha': 1., 'only_ctrl_curr_phase': False, 'only_ctrl_head_cav': True}}),
+    'Gv_noOPC_worker_pretrained_manager_head8cav_T2_alpha05_correct': setting('Gv', {
+        'light': {'train_model': False, 'load_model_name': '0721_new_rou/Gv_noOPC_loyal_pretrain_manager'},
+        'cav': {'cav': {'T': 2}, 'alpha': .5, 'only_ctrl_curr_phase': False, 'only_ctrl_head_cav': True}}),
 
     # # Note: To do
     # 'tpgv_noOPC_loyal_pretrain_manager': setting('tpgv', {}),

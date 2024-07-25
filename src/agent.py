@@ -572,7 +572,8 @@ class WorkerCavAgent:
                 curr_cav = curr_headcav
             self.ctrl_cav.append(curr_cav)
 
-            curr_lane = env.light_get_ctrl_lane(self.light_id, self.next_phase, curr_phase=not self.ctrl_all_lane)
+            # curr_lane = env.light_get_ctrl_lane(self.light_id, self.next_phase, curr_phase=not self.ctrl_all_lane)    # 与g_dims是2还是8有关
+            curr_lane = env.light_get_ctrl_lane(self.light_id, self.next_phase, curr_phase=False)
             if goal is not None:    # 说明上层切相位了，接下来是一对新车道的yrg
                 self.lane_speed = deque([[env.lane_get_speed(lane) / env.max_speed for lane in curr_lane]], maxlen=2)
                 self.goal = deque([goal.tolist()], maxlen=2)
