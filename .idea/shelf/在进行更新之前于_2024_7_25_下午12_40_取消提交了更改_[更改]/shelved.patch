@@ -1,0 +1,187 @@
+Index: .idea/workspace.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+><?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n<project version=\"4\">\r\n  <component name=\"ChangeListManager\">\r\n    <list default=\"true\" id=\"9cd1d0da-a44b-45c8-9cd8-a9b75a1bfa12\" name=\"更改\" comment=\"\" />\r\n    <option name=\"SHOW_DIALOG\" value=\"false\" />\r\n    <option name=\"HIGHLIGHT_CONFLICTS\" value=\"true\" />\r\n    <option name=\"HIGHLIGHT_NON_ACTIVE_CHANGELIST\" value=\"false\" />\r\n    <option name=\"LAST_RESOLUTION\" value=\"IGNORE\" />\r\n  </component>\r\n  <component name=\"Git.Settings\">\r\n    <option name=\"RECENT_GIT_ROOT_PATH\" value=\"$PROJECT_DIR$\" />\r\n  </component>\r\n  <component name=\"ProjectColorInfo\"><![CDATA[{\r\n  \"associatedIndex\": 2\r\n}]]></component>\r\n  <component name=\"ProjectId\" id=\"2jXvmqnvBwkWNkfVXUJJ4yNea4N\" />\r\n  <component name=\"ProjectLevelVcsManager\" settingsEditedManually=\"true\" />\r\n  <component name=\"ProjectViewState\">\r\n    <option name=\"hideEmptyMiddlePackages\" value=\"true\" />\r\n    <option name=\"showLibraryContents\" value=\"true\" />\r\n  </component>\r\n  <component name=\"PropertiesComponent\"><![CDATA[{\r\n  \"keyToString\": {\r\n    \"RunOnceActivity.ShowReadmeOnStart\": \"true\",\r\n    \"git-widget-placeholder\": \"master\"\r\n  }\r\n}]]></component>\r\n  <component name=\"SharedIndexes\">\r\n    <attachedChunks>\r\n      <set>\r\n        <option value=\"bundled-python-sdk-5b207ade9991-746f403e7f0c-com.jetbrains.pycharm.community.sharedIndexes.bundled-PC-241.17890.14\" />\r\n      </set>\r\n    </attachedChunks>\r\n  </component>\r\n  <component name=\"SpellCheckerSettings\" RuntimeDictionaries=\"0\" Folders=\"0\" CustomDictionaries=\"0\" DefaultDictionary=\"应用程序级\" UseSingleDictionary=\"true\" transferred=\"true\" />\r\n  <component name=\"TaskManager\">\r\n    <task active=\"true\" id=\"Default\" summary=\"默认任务\">\r\n      <changelist id=\"9cd1d0da-a44b-45c8-9cd8-a9b75a1bfa12\" name=\"更改\" comment=\"\" />\r\n      <created>1721546397525</created>\r\n      <option name=\"number\" value=\"Default\" />\r\n      <option name=\"presentableId\" value=\"Default\" />\r\n      <updated>1721546397525</updated>\r\n    </task>\r\n    <servers />\r\n  </component>\r\n</project>
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/.idea/workspace.xml b/.idea/workspace.xml
+--- a/.idea/workspace.xml	(revision 505676c63fb5a7355045a676386add7a131ef1cf)
++++ b/.idea/workspace.xml	(date 1721831689744)
+@@ -1,7 +1,14 @@
+ <?xml version="1.0" encoding="UTF-8"?>
+ <project version="4">
++  <component name="AutoImportSettings">
++    <option name="autoReloadType" value="SELECTIVE" />
++  </component>
+   <component name="ChangeListManager">
+-    <list default="true" id="9cd1d0da-a44b-45c8-9cd8-a9b75a1bfa12" name="更改" comment="" />
++    <list default="true" id="9cd1d0da-a44b-45c8-9cd8-a9b75a1bfa12" name="更改" comment="整理后初版，不一定对">
++      <change afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
++      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
++      <change beforePath="$PROJECT_DIR$/sumo_sim_env/env.sumocfg" beforeDir="false" afterPath="$PROJECT_DIR$/sumo_sim_env/env.sumocfg" afterDir="false" />
++    </list>
+     <option name="SHOW_DIALOG" value="false" />
+     <option name="HIGHLIGHT_CONFLICTS" value="true" />
+     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+@@ -9,22 +16,66 @@
+   </component>
+   <component name="Git.Settings">
+     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
++    <option name="UPDATE_TYPE" value="REBASE" />
+   </component>
+-  <component name="ProjectColorInfo"><![CDATA[{
+-  "associatedIndex": 2
+-}]]></component>
++  <component name="GitHubPullRequestSearchHistory">{
++  &quot;lastFilter&quot;: {
++    &quot;state&quot;: &quot;OPEN&quot;,
++    &quot;assignee&quot;: &quot;Mamo666&quot;
++  }
++}</component>
++  <component name="GithubPullRequestsUISettings">{
++  &quot;selectedUrlAndAccountId&quot;: {
++    &quot;url&quot;: &quot;https://github.com/Mamo666/HHRL-SVCC.git&quot;,
++    &quot;accountId&quot;: &quot;b9b82597-b97c-450f-8bdf-fa75bc7dfc16&quot;
++  }
++}</component>
++  <component name="ProjectColorInfo">{
++  &quot;associatedIndex&quot;: 2
++}</component>
+   <component name="ProjectId" id="2jXvmqnvBwkWNkfVXUJJ4yNea4N" />
+   <component name="ProjectLevelVcsManager" settingsEditedManually="true" />
+   <component name="ProjectViewState">
+     <option name="hideEmptyMiddlePackages" value="true" />
+     <option name="showLibraryContents" value="true" />
+   </component>
+-  <component name="PropertiesComponent"><![CDATA[{
+-  "keyToString": {
+-    "RunOnceActivity.ShowReadmeOnStart": "true",
+-    "git-widget-placeholder": "master"
+-  }
+-}]]></component>
++  <component name="PropertiesComponent">{
++  &quot;keyToString&quot;: {
++    &quot;Python.train.executor&quot;: &quot;Run&quot;,
++    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
++    &quot;git-widget-placeholder&quot;: &quot;master&quot;,
++    &quot;settings.editor.selected.configurable&quot;: &quot;vcs.Git&quot;
++  }
++}</component>
++  <component name="RunManager">
++    <configuration name="train" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
++      <module name="HHRL-SVCC" />
++      <option name="ENV_FILES" value="" />
++      <option name="INTERPRETER_OPTIONS" value="" />
++      <option name="PARENT_ENVS" value="true" />
++      <envs>
++        <env name="PYTHONUNBUFFERED" value="1" />
++      </envs>
++      <option name="SDK_HOME" value="" />
++      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/src" />
++      <option name="IS_MODULE_SDK" value="true" />
++      <option name="ADD_CONTENT_ROOTS" value="true" />
++      <option name="ADD_SOURCE_ROOTS" value="true" />
++      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/src/train.py" />
++      <option name="PARAMETERS" value="" />
++      <option name="SHOW_COMMAND_LINE" value="false" />
++      <option name="EMULATE_TERMINAL" value="false" />
++      <option name="MODULE_MODE" value="false" />
++      <option name="REDIRECT_INPUT" value="false" />
++      <option name="INPUT_FILE" value="" />
++      <method v="2" />
++    </configuration>
++    <recent_temporary>
++      <list>
++        <item itemvalue="Python.train" />
++      </list>
++    </recent_temporary>
++  </component>
+   <component name="SharedIndexes">
+     <attachedChunks>
+       <set>
+@@ -41,6 +92,44 @@
+       <option name="presentableId" value="Default" />
+       <updated>1721546397525</updated>
+     </task>
++    <task id="LOCAL-00001" summary="整理之前的，写的很乱">
++      <option name="closed" value="true" />
++      <created>1721546712024</created>
++      <option name="number" value="00001" />
++      <option name="presentableId" value="LOCAL-00001" />
++      <option name="project" value="LOCAL" />
++      <updated>1721546712024</updated>
++    </task>
++    <task id="LOCAL-00002" summary="整理后初版，不一定对">
++      <option name="closed" value="true" />
++      <created>1721576535554</created>
++      <option name="number" value="00002" />
++      <option name="presentableId" value="LOCAL-00002" />
++      <option name="project" value="LOCAL" />
++      <updated>1721576535555</updated>
++    </task>
++    <task id="LOCAL-00003" summary="整理后初版，不一定对">
++      <option name="closed" value="true" />
++      <created>1721577392407</created>
++      <option name="number" value="00003" />
++      <option name="presentableId" value="LOCAL-00003" />
++      <option name="project" value="LOCAL" />
++      <updated>1721577392407</updated>
++    </task>
++    <task id="LOCAL-00004" summary="整理后初版，不一定对">
++      <option name="closed" value="true" />
++      <created>1721577484125</created>
++      <option name="number" value="00004" />
++      <option name="presentableId" value="LOCAL-00004" />
++      <option name="project" value="LOCAL" />
++      <updated>1721577484125</updated>
++    </task>
++    <option name="localTasksCounter" value="5" />
+     <servers />
+   </component>
++  <component name="VcsManagerConfiguration">
++    <MESSAGE value="整理之前的，写的很乱" />
++    <MESSAGE value="整理后初版，不一定对" />
++    <option name="LAST_COMMIT_MESSAGE" value="整理后初版，不一定对" />
++  </component>
+ </project>
+\ No newline at end of file
+Index: .gitignore
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/.gitignore b/.gitignore
+new file mode 100644
+--- /dev/null	(date 1721831216358)
++++ b/.gitignore	(date 1721831216358)
+@@ -0,0 +1,1 @@
++/sumo_sim_env/single/
+Index: sumo_sim_env/env.sumocfg
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+><?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n\r\n<configuration xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xsi:noNamespaceSchemaLocation=\"http://sumo.dlr.de/xsd/sumoConfiguration.xsd\">\r\n\r\n    <input>\r\n        <net-file value=\"single/net.net.xml\"/>\r\n        <route-files value=\"single/rou.rou01.xml\"/>\r\n    </input>\r\n\r\n    <time>\r\n        <begin value=\"0\"/>\r\n        <end value=\"1296000\"/>\r\n       <step-length value=\"1\"/>\r\n    </time>\r\n\r\n    <report>\r\n        <no-warnings value=\"True\"/>\r\n    </report>\r\n\r\n    <processing>\r\n        <lanechange.overtake-right value=\"true\"/>\r\n        <collision.action value=\"none\"/>\r\n    </processing>\r\n    \r\n    <gui_only>\r\n        <gui-settings-file value=\"setting.settings.xml\"/>\r\n             \t<start value=\"t\"/>\r\n\t\t        <quit-on-end value=\"t\"/>\r\n    </gui_only>\r\n\r\n\t\r\n</configuration>
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/sumo_sim_env/env.sumocfg b/sumo_sim_env/env.sumocfg
+--- a/sumo_sim_env/env.sumocfg	(revision 505676c63fb5a7355045a676386add7a131ef1cf)
++++ b/sumo_sim_env/env.sumocfg	(date 1721831216359)
+@@ -3,14 +3,14 @@
+ <configuration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+ 
+     <input>
+-        <net-file value="single/net.net.xml"/>
+-        <route-files value="single/rou.rou01.xml"/>
++        <net-file value="single/no_lane_change.net.xml"/>
++        <route-files value="single/new/rou.rou12.xml"/>
+     </input>
+ 
+     <time>
+         <begin value="0"/>
+         <end value="1296000"/>
+-       <step-length value="1"/>
++        <step-length value="1"/>
+     </time>
+ 
+     <report>

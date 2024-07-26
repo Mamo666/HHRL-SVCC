@@ -501,14 +501,18 @@ class Environment:
 
 if __name__ == '__main__':
     from configs import env_configs
+
+    env_configs['single']['rou_path'] = 'single/rou/'
     env = Environment(env_configs, True)
     sumoBinary = checkBinary('sumo-gui')
     # time_episode = TIME
     # car_co2_analysis = [['car_' + str(i + 53278) + '.0'] for i in range(7500)]    # 用以存储每辆车的二氧化碳排放情况
-    env.start_env(sumoBinary, 1)
-    for time in range(3000):
-        env.step_env()
-        # env.ym_try('car_53278.0')
+    for i in range(30):
+        nf = i+1
+        env.start_env(sumoBinary, nf)
+        for time in range(3000):
+            env.step_env()
+            # env.ym_try('car_53278.0')
 
     # for time in range(200):
     #     env.step()
@@ -518,4 +522,4 @@ if __name__ == '__main__':
     #     # cn = env.get_car_name()
     #     # print(cn)
     #     env.ym_try('car_53278.0')
-    env.end_env()
+        env.end_env()

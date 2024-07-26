@@ -28,7 +28,24 @@ env_configs = {
         'sumocfg_path': '../sumo_sim_env/collision_env.sumocfg',    # 从代码到env.sumocfg的路径
         # 'sumocfg_path': '../sumo_sim_env/env.sumocfg',    # 从代码到env.sumocfg的路径      # NOTE: 注意检查碰撞是否处理, 不处理collision始终为0
         'rou_path': 'single/new/',
-        'net_path': 'single/no_lane_change.net.xml',  # 路网文件只会有一个,故写全
+        # 'net_path': 'single/no_lane_change.net.xml',  # 路网文件只会有一个,故写全
+        'net_path': 'single/net.net.xml',  # 路网文件只会有一个,故写全
+    },
+
+    # 针对2*2路网的配置
+    'four': {
+        'base_cycle_length': 100,  # 基准周期时长，用以进行标准化处理
+        'base_lane_length': 300,  # 基准道路长度，用以进行标准化处理
+        'max_speed': 13.89,  # 道路允许最大车速, m/s
+        'max_acc': 3,  # 最大加速度, m/s^2
+        'time_step': 1,  # 仿真步长为1s
+        'car_length': 4,  # 车辆长度均为4m
+
+        # 文件路径设置
+        'sumocfg_path': '../sumo_sim_env/collision_env.sumocfg',  # 从代码到env.sumocfg的路径
+        'rou_path': 'four/rou/',
+        'net_path': 'four/net_2_2.net.xml',
+        'ctrl_lane_path': '../sumo_sim_env/four/control_links.json',  # node-incoming_lane
     },
 
     # 针对108路网的配置
