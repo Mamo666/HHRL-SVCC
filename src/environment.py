@@ -16,7 +16,8 @@ sys.path.append(os.path.join(os.environ['SUMO_HOME'], 'tools'))
 
 class Environment:
     def __init__(self, config, single_flag):
-        cfg = config['single'] if single_flag else config['Chengdu']
+        self.net_name = 'four'  # 手动设置
+        cfg = config['single'] if single_flag else config[self.net_name]
         self.single_flag = single_flag
 
         self.time_step = cfg['time_step']
@@ -36,23 +37,25 @@ class Environment:
         self.collision_count = 0
 
         if not self.single_flag:
-            self.all_edges = xls_read(cfg['add_lane_path'])  # np.ndarray
             self.ctrl_lane_path = cfg['ctrl_lane_path']
-            self.del_intersection = cfg['del_intersection']
-            # self.edges_1 = self.all_edges[:, 0]
-            # self.edges_2 = self.all_edges[:, 1]
-            # self.intersection = self.all_edges[:, 2]
-            # # self.intersection_adj = self.get_intersection_relationship()
-            # #     """找到路口间的相邻关系，输入当前路口名，返回相邻路口名"""
-            # #     data = xls_read('intersection_relationship.xlsx')
-            # #     data_dict = {}
-            # #     for _ in range(len(data)):
-            # #         save_data = list(data[_][1:])
-            # #         while np.nan in save_data:
-            # #             save_data.remove(np.nan)
-            # #
-            # #         data_dict[data[_][0]] = save_data
-            # #     return data_dict
+            self.del_intersection = []
+            if self.net_name == 'Chengdu':
+                self.all_edges = xls_read(cfg['add_lane_path'])  # np.ndarray
+                self.del_intersection = cfg['del_intersection']
+                # self.edges_1 = self.all_edges[:, 0]
+                # self.edges_2 = self.all_edges[:, 1]
+                # self.intersection = self.all_edges[:, 2]
+                # # self.intersection_adj = self.get_intersection_relationship()
+                # #     """找到路口间的相邻关系，输入当前路口名，返回相邻路口名"""
+                # #     data = xls_read('intersection_relationship.xlsx')
+                # #     data_dict = {}
+                # #     for _ in range(len(data)):
+                # #         save_data = list(data[_][1:])
+                # #         while np.nan in save_data:
+                # #             save_data.remove(np.nan)
+                # #
+                # #         data_dict[data[_][0]] = save_data
+                # #     return data_dict
 
     """
                                         仿真环境的启动配置
@@ -102,10 +105,13 @@ class Environment:
             self.end_env()
         else:                       # 用于给别的函数提供路口列表
             light_id_list = traci.trafficlight.getIDList()
-        light_id = sorted(['n_' + _.split('_')[1] for _ in light_id_list])
+
+        if self.net_name == 'Chengdu':
+            light_id_list = sorted(['n_' + _.split('_')[1] for _ in light_id_list])
+
         for _ in self.del_intersection:  # 删除三岔路口
-            light_id.remove(_)
-        return light_id
+            light_id_list.remove(_)
+        return light_id_list
 
     def light_get_lane(self, intersection: str) -> list:
         """获取该信号灯所对应的入口车道编号"""
@@ -118,7 +124,7 @@ class Environment:
 
     def lane_get_con_lane(self, lane):
         """输入一个车道id，输出与之相连的车道id和“输入车道是否为路口的入口车道”(-1:3legs F:add T:lane)"""
-        if self.single_flag:
+        if self.single_flag or (not self.single_flag and self.net_name == 'four'):
             return None, True
 
         edge = traci.lane.getEdgeID(lane)
@@ -287,7 +293,7 @@ class Environment:
         def get_light_state_to_car(vehicle_id, use_left_time):
             # 找到当前相位是否为当前车辆的通行相位，若是（1），则输出当前相位剩余时间；若不是（0），则输出还有多久开启该车通行相位
             if vehicle_id is not None:
-                if self.single_flag:
+                if self.single_flag or (not self.single_flag and self.net_name == 'four'):
                     intersection = traci.vehicle.getNextTLS(vehicle_id)[0][0]
                 else:
                     edges_1 = self.all_edges[:, 0]
@@ -370,7 +376,7 @@ class Environment:
         lanes = self.light_get_lane(intersection)  # 获取该信号灯所控制的道路编号
         edges = [traci.lane.getEdgeID(lane) for lane in lanes][::2]  # 获取信号灯控制的4个入口edge
 
-        if self.single_flag:
+        if self.single_flag or (not self.single_flag and self.net_name == 'four'):
             income_count, outcome_count, halt = 0, 0, 0
             for edge in edges:
                 i, o = get_pressure(edge)
