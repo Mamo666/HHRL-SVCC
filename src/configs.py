@@ -27,7 +27,8 @@ env_configs = {
         # 文件路径设置
         'sumocfg_path': '../sumo_sim_env/collision_env.sumocfg',    # 从代码到env.sumocfg的路径
         # 'sumocfg_path': '../sumo_sim_env/env.sumocfg',    # 从代码到env.sumocfg的路径      # NOTE: 注意检查碰撞是否处理, 不处理collision始终为0
-        'rou_path': 'single/new/',
+        # 'rou_path': 'single/new/',
+        'rou_path': 'single/rou/',
         # 'net_path': 'single/no_lane_change.net.xml',  # 路网文件只会有一个,故写全
         'net_path': 'single/net.net.xml',  # 路网文件只会有一个,故写全
     },

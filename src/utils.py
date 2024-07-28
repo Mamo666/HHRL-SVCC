@@ -155,10 +155,11 @@ def generate_flow(net_mode: str, rou_path: str, total_car_num: list, space_dist_
 if __name__ == "__main__":
     np.random.seed(3407)  # 设置随机种子
 
-    rou_dir = 'four'
+    rou_dir = 'single/rou_test'
 
     cav_penetration = 0.2
-    space_imbalance_ratio = 0.16 if rou_dir == 'single' else 0.1
+    space_imbalance_ratio = 0.16 if 'single' in rou_dir else 0.1
+
     # time-low_balance/high_balance/imbalance,  space-balance/static_imbalance/dynamic_imbalance
     feature_config = {
         'time_low_balance__space_balance': {  # note:稀疏车流
@@ -186,7 +187,7 @@ if __name__ == "__main__":
             'space_dist_len': 1,  # 目前是根据time_dist长度判断要不要采用空间先均后不均的策略
         },
     }
-    if rou_dir == 'four':  # 2*2入口数翻一倍，路口数翻四倍，大概估计把车流量*2(试过2.5)来从single转到2*2
+    if 'four' in rou_dir:  # 2*2入口数翻一倍，路口数翻四倍，大概估计把车流量*2(试过2.5)来从single转到2*2
         for _, ft in feature_config.items():
             ft['time_dist'] = [int(_ * 2) for _ in ft['time_dist']]
 
@@ -197,7 +198,7 @@ if __name__ == "__main__":
             total_n_file += 1
             rou_file_num = str(total_n_file) if total_n_file >= 10 else '0' + str(total_n_file)
             random_space_dict = generate_flow(net_mode=rou_dir,
-                                              rou_path='../sumo_sim_env/' + rou_dir + '/rou/rou.rou' + rou_file_num + '.xml',
+                                              rou_path='../sumo_sim_env/' + rou_dir + '/rou.rou' + rou_file_num + '.xml',
                                               total_car_num=feature_config[feature]['time_dist'],
                                               space_dist_len=feature_config[feature]['space_dist_len'],
                                               penetration=cav_penetration,
@@ -207,4 +208,4 @@ if __name__ == "__main__":
         feature_config[feature]['penetration'] = cav_penetration
         feature_config[feature]['bias_ratio'] = None if feature_config[feature][
                                                             'space_dist_len'] == 0 else space_imbalance_ratio
-    txt_save('../sumo_sim_env/' + rou_dir + '/rou/flow_feature.txt', feature_config)
+    txt_save('../sumo_sim_env/' + rou_dir + '/flow_feature.txt', feature_config)

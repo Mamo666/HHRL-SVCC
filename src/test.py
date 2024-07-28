@@ -9,9 +9,9 @@ from agent import IndependentLightAgent, ManagerLightAgent, IndependentCavAgent,
 from configs import env_configs, get_agent_configs
 from environment import Environment
 
-env_configs['single']['sumocfg_path'] = '../sumo_sim_env/collision_env_tmp.sumocfg'    # 防止两边同时运行修改时撞车
-to_be_tested = '0718_new_rou'
-TEST_ROU_PATH = 'single/new_test/'
+env_configs['single']['sumocfg_path'] = '../sumo_sim_env/collision_env_tmp2.sumocfg'    # 防止两边同时运行修改时撞车
+to_be_tested = '0726_various_rou'
+TEST_ROU_PATH = 'single/rou_test/'
 
 
 def setting(base_key, change):
@@ -129,13 +129,20 @@ def setting(base_key, change):
 
 
 experience_cfg = {
+    # # Note：Done
+
+
+    # # Note：Doing
     'baseline': setting('baseline', {}),
-    'T': setting('T', {}),
-    'P': setting('P', {}),
-    'V': setting('V', {}),
-    'tp': setting('tp', {}),
-    'tpV': setting('tpV', {}),
-    'tpgv': setting('tpgv', {}),
+
+
+    # # Note: To do
+    # 'T': setting('T', {}),
+    # 'P': setting('P', {}),
+    # 'V': setting('V', {}),
+    # 'tp': setting('tp', {}),
+    # 'tpV': setting('tpV', {}),
+    # 'tpgv': setting('tpgv', {}),
 }
 
 
@@ -183,7 +190,7 @@ def launch_test(exp_cfg, single_flag=True):
                 if l_p is not None:
                     writer.add_scalar('next phase/' + str(episode), l_p, t)
                 if goal is not None:
-                    writer.add_scalar('advice speed/' + str(episode), goal * env.max_speed, t)
+                    writer.add_scalar('advice speed lane0/' + str(episode), goal[0] * env.max_speed, t)
                     # print(goal * env.max_speed)
                 if v_a is not None:
                     writer.add_scalar('head CAV action/' + str(episode), v_a, t)

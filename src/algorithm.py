@@ -352,7 +352,7 @@ class HATD3Double:
         obs = torch.FloatTensor(o2).view(1, -1, self.o2_dim).to(device)
         return self.actor2(obs).cpu().data.numpy().flatten()
 
-    def learn(self, worker_policy):
+    def learn(self, worker_policy=None):
         self.total_it += 1
         # mini batch sample
         indices = np.random.choice(min(self.pointer, self.memory_capacity), size=self.batch_size)   # 注意，这里是默认有放回

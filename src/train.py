@@ -13,9 +13,9 @@ from environment import Environment
 np.random.seed(3407)  # 设置随机种子
 
 
-series_name = '0721_new_rou'
-MAX_EPISODES = 100  # 训练轮数
-SUMO_GUI = True
+series_name = '0728_rou4'
+MAX_EPISODES = 70  # 训练轮数
+SUMO_GUI = False
 
 
 def setting(base_key, change):
@@ -81,16 +81,44 @@ def setting(base_key, change):
 
 experience_cfg = {
     # # Note：Done
+    # 'Gv_noOPC_loyal_pretrain_manager': setting('Gv', {}),
+    # 'Gv_noOPC_worker_pretrained_manager': setting('Gv', {
+    #     'light': {'load_model_name': '0721_new_rou/Gv_noOPC_loyal_pretrain_manager'}}),
+    # 'V_all8cav': setting('V', {'cav': {'only_ctrl_head_cav': False}}),
+    # 'V_head8cav': setting('V', {'cav': {'only_ctrl_head_cav': True}}),
+    # 'V_head8cav_T2': setting('V', {'cav': {'only_ctrl_head_cav': True, 'cav': {'T': 2}}}),
+    # 'V_all8cav_T2': setting('V', {'cav': {'only_ctrl_head_cav': False, 'cav': {'T': 2}}}),
+    # 'Gv_noOPC_worker_pretrained_manager': setting('Gv', {
+    #     'light': {'train_model': False, 'load_model_name': '0721_new_rou/Gv_noOPC_loyal_pretrain_manager'},
+    #     'cav': {'alpha': 1.}}),
+    # 'Gv_noOPC_worker_pretrained_manager_head2cav__correct': setting('Gv', {
+    #     'light': {'train_model': False, 'load_model_name': '0721_new_rou/Gv_noOPC_loyal_pretrain_manager'},
+    #     'cav': {'alpha': 1., 'only_ctrl_curr_phase': True, 'only_ctrl_head_cav': True}}),  # memory size changed
+    # 'Gv_noOPC_worker_pretrained_manager_head8cav__correct': setting('Gv', {
+    #     'light': {'train_model': False, 'load_model_name': '0721_new_rou/Gv_noOPC_loyal_pretrain_manager'},
+    #     'cav': {'alpha': 1., 'only_ctrl_curr_phase': False, 'only_ctrl_head_cav': True}}),  # memory size changed
+    # 'Gv_noOPC_worker_pretrained_manager_head8cav_T2__correct': setting('Gv', {
+    #     'light': {'train_model': False, 'load_model_name': '0721_new_rou/Gv_noOPC_loyal_pretrain_manager'},
+    #     'cav': {'cav': {'T': 2}, 'alpha': 1., 'only_ctrl_curr_phase': False, 'only_ctrl_head_cav': True}}),
+    # 'Gv_noOPC_worker_pretrained_manager_head8cav_T2_alpha05_correct': setting('Gv', {
+    #     'light': {'train_model': False, 'load_model_name': '0721_new_rou/Gv_noOPC_loyal_pretrain_manager'},
+    #     'cav': {'cav': {'T': 2}, 'alpha': .5, 'only_ctrl_curr_phase': False, 'only_ctrl_head_cav': True}}),
 
     # # Note：Doing
-    'V': setting('V', {}),
+    # 'T': setting('T', {}),
+    # 'tp': setting('tp', {}),
+    # 'tpgv_noOPC_loyal_pretrain_manager': setting('tpgv', {}),
+    'Gv_noOPC_loyal_pretrain_manager': setting('Gv', {}),
 
     # # Note: To do
-
+    # 'tpgv_noOPC_worker_pretrained_manager': setting('tpgv', {
+    #     'light': {'load_model_name': '0721_new_rou/tpgv_noOPC_loyal_pretrain_manager'}})
 }
+# flow_feat_id_list = [0, 1, 2, 3, 4, 5]
+flow_feat_id_list = [4]
 
 
-def launch_experiment(exp_cfg, save_model=True, single_flag=True):
+def launch_experiment(exp_cfg, save_model=True, single_flag=True, flow_feat_id=None):
     global MAX_EPISODES, SUMO_GUI
 
     exp_cfg['turn_on_gui_after_learn_start'] = True
@@ -117,7 +145,8 @@ def launch_experiment(exp_cfg, save_model=True, single_flag=True):
                    {'env': env_configs, 'light': light_configs, 'cav': cav_configs})
 
     for episode in range(MAX_EPISODES):
-        rou_file_num = np.random.randint(1, 15)  # 随机选取一个训练环境
+        # rou_file_num = np.random.randint(1, 16)  # 随机选取一个训练环境
+        rou_file_num = np.random.randint(flow_feat_id * 5 + 1, flow_feat_id * 5 + 6)  # 随机选取一个训练环境
         print("Ep:", episode, "File:", env.rou_path, rou_file_num, '\t', time.strftime("%Y-%m-%d %H:%M:%S"))
         if (light_agent[light_id_list[0]].pointer > light_agent[light_id_list[0]].learn_begin and
                 cav_agent[light_id_list[0]].pointer > cav_agent[light_id_list[0]].learn_begin):
@@ -199,9 +228,10 @@ def launch_experiment(exp_cfg, save_model=True, single_flag=True):
 
 
 if __name__ == "__main__":
-    for key in experience_cfg:
-        series_name = series_name + '/' if series_name[-1] != '/' else series_name
-        experience_cfg[key]['experiment_name'] = series_name + key
-        print(experience_cfg[key]['experiment_name'], 'start running')
-        launch_experiment(experience_cfg[key], save_model=True, single_flag=True)
+    for ffi in flow_feat_id_list:
+        for key in experience_cfg:
+            series_name = series_name + '/' if series_name[-1] != '/' else series_name
+            experience_cfg[key]['experiment_name'] = series_name + key + '_' + str(ffi)
+            print(experience_cfg[key]['experiment_name'], 'start running')
+            launch_experiment(experience_cfg[key], save_model=True, single_flag=True, flow_feat_id=ffi)
 
