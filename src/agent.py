@@ -496,8 +496,7 @@ class IndependentCavAgent:
             r, n = self._step(env, goal[light_idx], next_phase[light_idx], light)
             real.append(r)
             next_a.append(n)
-        # return real, next_a
-        return real[0], next_a[0]  # 只向外展示第一个路口的动作
+        return real, next_a
 
     def _step(self, env, goal, next_phase, light):
         next_acc, real_a = None, None
@@ -641,8 +640,7 @@ class WorkerCavAgent:
             r, n = self._step(env, goal[light_idx], next_phase[light_idx], light)
             real.append(r)
             next_a.append(n)
-        # return real, next_a
-        return real[0], next_a[0]  # 只向外展示第一个路口的动作
+        return real, next_a
 
     def _step(self, env, goal: np.ndarray, next_phase, light):
         next_acc, real_a = None, None
@@ -799,7 +797,7 @@ class LoyalCavAgent:
     def step(self, env, goal, next_phase):
         for light in self.light_id:
             self._step(env, goal, next_phase, light)
-        return None, None
+        return [None] * len(self.light_id), [None] * len(self.light_id)
 
     def _step(self, env, goal, next_phase, light):
         next_acc, real_a = None, None

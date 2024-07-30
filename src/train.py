@@ -13,14 +13,6 @@ from environment import Environment
 np.random.seed(3407)  # 设置随机种子
 
 
-series_name = '0728_rou4'
-SINGLE_FLAG = True
-MAX_EPISODES = 70  # 训练轮数
-SUMO_GUI = False
-# flow_feat_id_list = [0, 1, 2, 3, 4, 5]
-flow_feat_id_list = [4]
-
-
 def setting(base_key, change):
     experience_cfg_base = {
         'T': {
@@ -107,17 +99,29 @@ experience_cfg = {
     #     'light': {'train_model': False, 'load_model_name': '0721_new_rou/Gv_noOPC_loyal_pretrain_manager'},
     #     'cav': {'cav': {'T': 2}, 'alpha': .5, 'only_ctrl_curr_phase': False, 'only_ctrl_head_cav': True}}),
 
-    # # Note：Doing
     # 'T': setting('T', {}),
     # 'tp': setting('tp', {}),
     # 'tpgv_noOPC_loyal_pretrain_manager': setting('tpgv', {}),
     # 'Gv_noOPC_loyal_pretrain_manager': setting('Gv', {}),
-    'V': setting('V', {}),
+    # 'V': setting('V', {}),
+
+    # # Note：Doing
+    'T': setting('T', {}),
+    'Gv_loyal': setting('Gv', {}),
 
     # # Note: To do
     # 'tpgv_noOPC_worker_pretrained_manager': setting('tpgv', {
     #     'light': {'load_model_name': '0721_new_rou/tpgv_noOPC_loyal_pretrain_manager'}})
 }
+
+series_name = '0728_four_rou4'
+SINGLE_FLAG = False
+MAX_EPISODES = 50  # 训练轮数
+SUMO_GUI = False
+# flow_feat_id_list = [0, 1, 2, 3, 4, 5]
+flow_feat_id_list = [4]
+
+
 
 
 def launch_experiment(exp_cfg, save_model=True, single_flag=True, flow_feat_id=None):
