@@ -795,8 +795,8 @@ class LoyalCavAgent:
         return obs_seq, act_seq
 
     def step(self, env, goal, next_phase):
-        for light in self.light_id:
-            self._step(env, goal, next_phase, light)
+        for light_idx, light in enumerate(self.light_id):
+            self._step(env, goal[light_idx], next_phase[light_idx], light)
         return [None] * len(self.light_id), [None] * len(self.light_id)
 
     def _step(self, env, goal, next_phase, light):
