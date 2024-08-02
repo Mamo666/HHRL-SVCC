@@ -211,6 +211,7 @@ class Environment:
         """获取信号灯状态：当前相位,各相排队数（暂不考虑异构路口放信号灯，即目前只能是四相位）"""
         def get_lane_upcoming_veh_num(lane):  # 获取车道状态：车辆数（归一化因子：道路占用率）
             return 0 if lane is None else traci.lane.getLastStepVehicleNumber(lane) * 10 / traci.lane.getLength(lane)
+
         def get_lane_halting_veh_num(lane):  # 获取车道状态：车辆数（归一化因子：道路占用率）
             return 0 if lane is None else traci.lane.getLastStepHaltingNumber(lane) * 10 / traci.lane.getLength(lane)
 
@@ -223,8 +224,8 @@ class Environment:
 
         veh_state = [veh_num[i] + veh_num[i + 4] for i in range(4)]
         halt_state = [halt[i] + halt[i + 4] for i in range(4)]
-        curr_phase = traci.trafficlight.getPhase(intersection) // 3
-        one_hot_encoding = np.eye(4)[curr_phase].tolist()
+        # curr_phase = traci.trafficlight.getPhase(intersection) // 3
+        # one_hot_encoding = np.eye(4)[curr_phase].tolist()
 
         # return one_hot_encoding + veh_state  # 返回状态(4+4=8)
         # return one_hot_encoding + veh_state + halt_state  # 返回状态(4+4+4=12)
