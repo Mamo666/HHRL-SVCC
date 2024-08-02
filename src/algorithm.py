@@ -392,32 +392,19 @@ class HATD3Double:
 
         # Delayed policy updates
         if self.total_it % self.policy_freq == 0:
-            if np.random.rand() <= 0.5:
-                # joint_action = torch.cat((self.actor1(o1), a2), 1)
-                joint_action = torch.cat((self.actor1(o1), self.actor2(o2)), 1)
-                actor_loss1 = -self.critic.Q1(o1, o2, joint_action).mean()
-                self.actor1_optimizer.zero_grad()
-                actor_loss1.backward()
-                self.actor1_optimizer.step()
+            actors = [self.actor1, self.actor2]  # 添加更多的actor
+            optimizers = [self.actor1_optimizer, self.actor2_optimizer]  # 添加更多的optimizer
+            o_list = [o1, o2]  # 添加更多的o
 
-                joint_action = torch.cat((self.actor1(o1), self.actor2(o2)), 1)
-                actor_loss2 = -self.critic.Q1(o1, o2, joint_action).mean()
-                self.actor2_optimizer.zero_grad()
-                actor_loss2.backward()
-                self.actor2_optimizer.step()
-            else:
-                # joint_action = torch.cat((a1, self.actor2(o2)), 1)
-                joint_action = torch.cat((self.actor1(o1), self.actor2(o2)), 1)
-                actor_loss2 = -self.critic.Q1(o1, o2, joint_action).mean()
-                self.actor2_optimizer.zero_grad()
-                actor_loss2.backward()
-                self.actor2_optimizer.step()
+            # 随机打乱更新顺序
+            order = np.random.permutation(len(actors))
 
-                joint_action = torch.cat((self.actor1(o1), self.actor2(o2)), 1)
-                actor_loss1 = -self.critic.Q1(o1, o2, joint_action).mean()
-                self.actor1_optimizer.zero_grad()
-                actor_loss1.backward()
-                self.actor1_optimizer.step()
+            for i in order:
+                joint_action = torch.cat([actors[j](o_list[j]) for j in range(len(actors))], dim=1)
+                actor_loss = -self.critic.Q1(o1, o2, joint_action).mean()
+                optimizers[i].zero_grad()
+                actor_loss.backward()
+                optimizers[i].step()
 
             # Update the frozen target models
             for param, target_param in zip(self.critic.parameters(), self.critic_target.parameters()):
@@ -566,41 +553,6 @@ class CriticTriple(nn.Module):  # 定义 critic 网络结构
 
 
 class HATD3Triple:
-    class ReplayBuffer:
-        def __init__(self, capacity, obs_dim, act_dim):
-            self.capacity = capacity
-            worker_obs_dim, worker_act_dim = 8, 1
-            # self.memory = np.zeros((self.memory_capacity, self.obs_dim * 2 + self.a_dim + 1))
-            self.buffer = {
-                'obs': np.zeros((capacity, obs_dim), dtype=np.float32),
-                'next_obs': np.zeros((capacity, obs_dim), dtype=np.float32),
-                'action': np.zeros((capacity, act_dim), dtype=np.float32),  # goal_dim
-                'reward': np.zeros((capacity, 1), dtype=np.float32),
-                'worker_obs': [],
-                'worker_act': [],
-                # 'worker_obs': np.zeros((capacity, seq_len, 8, worker_obs_dim), dtype=np.float32),
-                # 'worker_act': np.zeros((capacity, seq_len, 8, worker_act_dim), dtype=np.float32),
-            }
-            self.pointer = 0
-
-        def store_transition(self, *args):
-            o, a, r, o_, wo, wa = args
-            index = self.pointer % self.capacity
-            self.buffer['obs'][index] = o
-            self.buffer['action'][index] = a
-            self.buffer['reward'][index] = r
-            self.buffer['next_obs'][index] = o_
-            # self.buffer['worker_obs'].append(wo)
-            # self.buffer['worker_act'].append(wa)
-            wo, wa = np.array(wo), np.array(wa)
-            self.buffer['worker_obs'][index] = wo
-            self.buffer['worker_act'][index] = wa
-
-            self.pointer += 1
-
-        def __getitem__(self, item):
-            return self.buffer[item]
-
     def __init__(self, cfg):    # l对应time，v对应phase，懒得改变量名了，就这吧
         self.use_opc = cfg['use_opc']
         self.o1_dim = cfg['time']['obs_dim']       # 单步观测维度
@@ -632,8 +584,6 @@ class HATD3Triple:
         self.learn_begin = self.memory_capacity * cfg['learn_start_ratio']   # 存满一定比例的记忆库之后开始学习并用网络输出动作
         self.memory = np.zeros((self.memory_capacity, self.obs_dim * 2 + self.act_dim + 1))
         self.pointer = 0
-        # self.memory = self.ReplayBuffer(self.memory_capacity, self.obs_dim, self.a_dim, 25)
-        # self.store_transition = self.memory.store_transition
 
         # 创建对应的四个网络
         self.actor1 = Actor(self.o1_dim, self.s1_dim, self.a1_dim, self.t1, cfg['actor_hidden_dim']).to(device)
@@ -853,9 +803,6 @@ class ManagerTD3:
                 # 'worker_act': [],
                 'worker_obs': np.zeros((capacity, seq_len, 8, worker_obs_dim), dtype=np.float32),
                 'worker_act': np.zeros((capacity, seq_len, 8, worker_act_dim), dtype=np.float32),
-                # 'goal': np.zeros((capacity, goal_dim), dtype=np.float32),
-                # 'obs': [[] for _ in range(capacity)],
-                # 'next_obs': [[] for _ in range(capacity)],
             }
             self.pointer = 0
 
@@ -920,7 +867,7 @@ class ManagerTD3:
     @property
     def pointer(self):
         return self.memory.pointer
-    #
+
     # def store_transition(self, o, a, r, o_):
     #     transition = np.hstack((o, a, r, o_))
     #     index = self.pointer % self.memory_capacity
