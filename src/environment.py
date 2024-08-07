@@ -236,7 +236,7 @@ class Environment:
         lanes = self.light_get_lane(intersection)
         ave_v, head_xva = [], []
         for lane in lanes:
-            ave_v.append(self.lane_get_speed(lane))
+            ave_v.append(self.lane_get_speed(lane) / self.max_speed)
             head_cav_id = self.lane_get_cav(lane, head_only=True)
             if head_cav_id is not None:
                 # loc=该车到停车线的距离=道路总长度-当前位置(与起始线距离)=lane长度-到lane起点距离
@@ -452,6 +452,9 @@ class Environment:
     def get_manager_fluency_reward(self, intersection):
         halt = [-traci.lane.getLastStepHaltingNumber(lane) for lane in self.light_get_lane(intersection)]
         return sum(halt) / len(halt)
+    def get_manager_wait_reward(self, intersection):
+        wait = [-traci.lane.getWaitingTime(lane) for lane in self.light_get_lane(intersection)]
+        return sum(wait) / len(wait)
 
     def get_performance(self):
         """获取路网总的等待时间、排队长度、碳排放、燃油消耗、平均速度作为评价指标"""
@@ -502,8 +505,28 @@ class Environment:
         """将cav的加速度设置为给定值, 仅供Loyal使用"""
         # exact_speed = delta_v * self.max_speed + self.lane_get_speed(traci.vehicle.getLaneID(cav_id))
         # next_speed = max(0, min(exact_speed, self.max_speed))
-        traci.vehicle.setSpeedMode(cav_id, 1110)
+        # traci.vehicle.setSpeedMode(cav_id, 1110)
         traci.vehicle.setSpeed(cav_id, next_speed)
+    # def get_car_x(self, cav_id):  # 供车速空间分布函数使用
+    #     return 1 - traci.vehicle.getLanePosition(cav_id) / self.base_lane_length
+
+    def get_adj_light_obs(self, intersection):
+        res = {'n_0': ['n_1', 'n_2'],
+               'n_1': ['n_0', 'n_3'],
+               'n_2': ['n_0', 'n_3'],
+               'n_3': ['n_1', 'n_2']}
+        l1, l2 = res[intersection][0], res[intersection][1]
+        o1, o2 = self.get_light_obs(l1), self.get_light_obs(l2)
+        return o1 + o2  # list
+
+    def get_adj_light_reward(self, intersection):
+        res = {'n_0': ['n_1', 'n_2'],
+               'n_1': ['n_0', 'n_3'],
+               'n_2': ['n_0', 'n_3'],
+               'n_3': ['n_1', 'n_2']}
+        l1, l2 = res[intersection][0], res[intersection][1]
+        r1, r2 = self.get_light_reward(l1), self.get_light_reward(l2)
+        return r1 + r2  # list
 
 
 if __name__ == '__main__':
