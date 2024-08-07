@@ -14,6 +14,27 @@ torch.backends.cudnn.deterministic = True
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
+class FuncNet(nn.Module):
+    def __init__(self, input_dim, hidden_dim, output_dim):
+        super(FuncNet, self).__init__()
+        self.fc1 = nn.Linear(input_dim, hidden_dim)
+        self.fc2 = nn.Linear(hidden_dim, output_dim)
+        for p in self.parameters():
+            p.requires_grad = False
+
+    def update_param(self, params):
+        pointer = 0
+        for param in self.parameters():
+            param.data = torch.from_numpy(params[pointer:pointer + param.numel()]).view_as(param).float()
+            pointer += param.numel()
+
+    def forward(self, x):
+        x = torch.FloatTensor(x).view(1, -1)
+        x = F.relu(self.fc1(x))
+        x = self.fc2(x)
+        return x
+
+
 class LSTM(nn.Module):
     def __init__(self, obs_dim, out_dim, t, rnn_num_layer=1, use_bilstm=True):
         super(LSTM, self).__init__()
