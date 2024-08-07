@@ -7,7 +7,7 @@ from collections import deque
 
 import numpy as np
 
-from algorithm import HATD3Triple, HATD3Double, HATD3, TD3Single, WorkerTD3, ManagerTD3
+from algorithm import HATD3Triple, HATD3Double, HATD3, TD3Single, WorkerTD3, ManagerTD3, FuncNet
 
 np.random.seed(3407)  # 设置随机种子
 
@@ -28,6 +28,12 @@ class IndependentLightAgent:
         self.lstm_observe_every_step = config['lstm_observe_every_step']
 
         config['memory_capacity'] = config['memory_capacity'] * len(self.light_id)  # 控制多路口会导致存速翻倍，故扩大容量以匹配
+        config['time']['obs_dim'] = 41
+        config['phase']['obs_dim'] = 41
+        config['vehicle']['obs_dim'] = 41
+        config['time']['state_dim'] = 128
+        config['phase']['state_dim'] = 128
+        config['vehicle']['state_dim'] = 128
 
         if self.use_time and self.use_phase:
             self.network = HATD3(config)
@@ -38,7 +44,7 @@ class IndependentLightAgent:
             # self.network = DQN(config, 'phase')
         self.save = lambda path, ep: self.network.save(path + 'light_agent_' + self.holon_name + '_ep_' + str(ep))
         if self.load_model:
-            load_ep = str(config['load_model_ep']) if config['load_model_ep'] else 99
+            load_ep = str(config['load_model_ep']) if config['load_model_ep'] else '99'
             self.network.load('../model/' + config['load_model_name'] + '/light_agent_' + self.holon_name + '_ep_' + load_ep)
 
         self.var = config['var']
@@ -83,11 +89,20 @@ class IndependentLightAgent:
         # return tl[0], pl[0]  # 只向外展示第一个路口的动作
 
     def _step(self, env, light):
-        if self.lstm_observe_every_step:
-            o_t = np.eye(4)[int(self.phase_list[light][-1])].tolist() + env.get_light_obs(light)
-            self.step_time_obs[light].append(o_t)                      # 存近10步obs(T, o_dim)
-            o_p = np.eye(4)[int(self.phase_list[light][-1])].tolist() + env.get_light_obs(light)
-            self.step_phase_obs[light].append(o_p)
+        my_obs = env.get_light_obs(light)   # 8
+        adj_obs = env.get_adj_light_obs(light)  # 16
+        add_light_id = np.eye(len(self.light_id))[int(self.light_id.index(light))].tolist()  # 4
+        add_phase_id = np.eye(4)[int(self.phase_list[light][-1])].tolist()               # 4
+        remain_green = (self.green[light] if self.color[light] in 'yr' else self.time_index[light]) / (env.base_cycle_length / 4)   # 1
+        ave_v = [env.lane_get_speed(lane) for lane in env.light_get_lane(light)]    # 8
+        obs = my_obs + adj_obs + add_light_id + add_phase_id + ave_v + [remain_green]
+        self.step_time_obs[light].append(obs)
+        self.step_phase_obs[light].append(obs)
+        # if self.lstm_observe_every_step:
+        #     o_t = np.eye(4)[int(self.phase_list[light][-1])].tolist() + env.get_light_obs(light)
+        #     self.step_time_obs[light].append(o_t)                      # 存近10步obs(T, o_dim)
+        #     o_p = np.eye(4)[int(self.phase_list[light][-1])].tolist() + env.get_light_obs(light)
+        #     self.step_phase_obs[light].append(o_p)
 
         next_green, next_phase = None, None
         if self.time_index[light] == 0:
@@ -148,6 +163,7 @@ class IndependentLightAgent:
 
                 if self.train_model:
                     reward = env.get_light_reward(light)
+                    reward = reward + 0.3 * env.get_adj_light_reward(light)
                     self.reward_list.append(reward)
                     if self.use_time and self.use_phase:
                         if len(self.o_t_list[light]) >= 2 and len(self.o_p_list[light]) >= 2:
@@ -210,7 +226,13 @@ class ManagerLightAgent:
         self.lstm_observe_every_step = config['lstm_observe_every_step']
 
         config['memory_capacity'] = config['memory_capacity'] * len(self.light_id)  # 控制多路口会导致存速翻倍，故扩大容量以匹配
-        config['vehicle']['obs_dim'] = config['vehicle']['obs_dim'] + len(self.light_id)    # note: 临时增加了路口编号作为g_obs！！！
+        # config['vehicle']['obs_dim'] = config['vehicle']['obs_dim'] + len(self.light_id)    # note: 临时增加了路口编号作为g_obs！！！
+        config['time']['obs_dim'] = 41
+        config['phase']['obs_dim'] = 41
+        config['vehicle']['obs_dim'] = 41
+        config['time']['state_dim'] = 128
+        config['phase']['state_dim'] = 128
+        config['vehicle']['state_dim'] = 128
 
         if self.use_time and self.use_phase:
             self.light_opt = 'both'
@@ -224,9 +246,9 @@ class ManagerLightAgent:
 
         self.save = lambda path, ep: self.network.save(path + 'light_agent_' + self.holon_name + '_ep_' + str(ep))
         if self.load_model:
-            load_ep = str(config['load_model_ep']) if config['load_model_ep'] else 99
+            load_ep = str(config['load_model_ep']) if config['load_model_ep'] else '99'
             self.network.load('../model/' + config['load_model_name'] + '/light_agent_' + self.holon_name + '_ep_' + load_ep)
-
+        self.reward_flag = config['reward_flag']
         self.var = config['var']
         self.o_t = config['time']['obs_dim']
         self.a_t = config['time']['act_dim']
@@ -279,18 +301,28 @@ class ManagerLightAgent:
         # return tl[0], pl[0], gl[0]  # 只向外展示第一个路口的动作
 
     def _step(self, env, light):
-        if self.lstm_observe_every_step:
-            o_t = np.eye(4)[int(self.phase_list[light][-1])].tolist() + env.get_light_obs(light)
-            self.step_time_obs[light].append(o_t)                      # 存近10步obs(T, o_dim)
-            o_p = np.eye(4)[int(self.phase_list[light][-1])].tolist() + env.get_light_obs(light)
-            self.step_phase_obs[light].append(o_p)
-
-        # remain_green = (self.green if self.color in 'yr' else self.time_index) / (4 * env.base_cycle_length)
-        remain_green = (self.green[light] if self.color[light] in 'yr' else self.time_index[light]) / (env.base_cycle_length / 4)
-        # goal只看变灯时刻状态不合理，应该每秒都看
-        add_light_id = np.eye(len(self.light_id))[int(self.light_id.index(light))].tolist()
-        o_g = add_light_id + np.eye(4)[int(self.phase_list[light][-1])].tolist() + env.get_goal_obs(light) + [remain_green]
-        self.step_goal_obs[light].append(o_g)
+        my_obs = env.get_light_obs(light)   # 8
+        adj_obs = env.get_adj_light_obs(light)  # 16
+        add_light_id = np.eye(len(self.light_id))[int(self.light_id.index(light))].tolist()  # 4
+        add_phase_id = np.eye(4)[int(self.phase_list[light][-1])].tolist()               # 4
+        remain_green = (self.green[light] if self.color[light] in 'yr' else self.time_index[light]) / (env.base_cycle_length / 4)   # 1
+        ave_v = [env.lane_get_speed(lane) for lane in env.light_get_lane(light)]    # 8
+        obs = my_obs + adj_obs + add_light_id + add_phase_id + ave_v + [remain_green]
+        self.step_time_obs[light].append(obs)
+        self.step_phase_obs[light].append(obs)
+        self.step_goal_obs[light].append(obs)
+        # if self.lstm_observe_every_step:
+        #     o_t = np.eye(4)[int(self.phase_list[light][-1])].tolist() + env.get_light_obs(light)
+        #     self.step_time_obs[light].append(o_t)                      # 存近10步obs(T, o_dim)
+        #     o_p = np.eye(4)[int(self.phase_list[light][-1])].tolist() + env.get_light_obs(light)
+        #     self.step_phase_obs[light].append(o_p)
+        #
+        # # remain_green = (self.green if self.color in 'yr' else self.time_index) / (4 * env.base_cycle_length)
+        # remain_green = (self.green[light] if self.color[light] in 'yr' else self.time_index[light]) / (env.base_cycle_length / 4)
+        # # goal只看变灯时刻状态不合理，应该每秒都看
+        # add_light_id = np.eye(len(self.light_id))[int(self.light_id.index(light))].tolist()
+        # o_g = add_light_id + np.eye(4)[int(self.phase_list[light][-1])].tolist() + env.get_goal_obs(light) + [remain_green]
+        # self.step_goal_obs[light].append(o_g)
         self.accumulate_reward_manager[light].append(env.get_manager_fluency_reward(light))
 
         next_green, next_phase, vehicle_goal = None, None, None
@@ -366,10 +398,50 @@ class ManagerLightAgent:
                 vehicle_goal = a_g
 
                 reward = env.get_light_reward(light)
+                reward = reward + 0.3 * env.get_adj_light_reward(light)
 
                 g_reward = sum(self.accumulate_reward_manager[light]) / len(self.accumulate_reward_manager[light]) if (
                         len(self.accumulate_reward_manager[light]) > 0) else 0      # 平均每秒每车道的停止车辆数
                 self.accumulate_reward_manager[light] = []  # 是否应该考虑把waiting time 也用于goal的reward？有点麻烦，先不了
+                wait_reward = env.get_manager_wait_reward(light) / 60
+                if self.reward_flag == -1:
+                    reward *= 5
+                if self.reward_flag == 0:
+                    reward *= 2
+                if self.reward_flag == 1:
+                    reward *= 10
+                if self.reward_flag == 2:
+                    g_reward = 0
+                if self.reward_flag == 3:
+                    reward *= 2
+                    g_reward = 0
+                if self.reward_flag == 4:
+                    reward *= 10
+                    g_reward = 0
+                if self.reward_flag == 5:
+                    g_reward += wait_reward
+                if self.reward_flag == 6:
+                    g_reward += wait_reward*2
+                if self.reward_flag == 7:
+                    g_reward += wait_reward*10
+                if self.reward_flag == 8:
+                    g_reward += wait_reward
+                    reward *= 2
+                if self.reward_flag == 9:
+                    g_reward += wait_reward*2
+                    reward *= 2
+                if self.reward_flag == 10:
+                    g_reward += wait_reward*10
+                    reward *= 2
+                if self.reward_flag == 11:
+                    g_reward += wait_reward
+                    reward *= 10
+                if self.reward_flag == 12:
+                    g_reward += wait_reward*2
+                    reward *= 10
+                if self.reward_flag == 13:
+                    g_reward += wait_reward*10
+                    reward *= 10
 
                 worker_obs, worker_act = self.get_worker_oa()
                 if self.light_opt == 'both':    # 3Actor
@@ -459,7 +531,7 @@ class IndependentCavAgent:
         self.network = TD3Single(config, 'cav')
         self.save = lambda path, ep: self.network.save(path + 'cav_agent_' + self.holon_name + '_ep_' + str(ep))
         if self.load_model:
-            load_ep = str(config['load_model_ep']) if config['load_model_ep'] else 99
+            load_ep = str(config['load_model_ep']) if config['load_model_ep'] else '99'
             self.network.load('../model/' + config['load_model_name'] + '/cav_agent_' + self.holon_name + '_ep_' + load_ep)
 
         self.var = config['var']
@@ -589,7 +661,7 @@ class WorkerCavAgent:
         self.network = WorkerTD3(config)
         self.save = lambda path, ep: self.network.save(path + 'cav_agent_' + self.holon_name + '_ep_' + str(ep))
         if self.load_model:
-            load_ep = str(config['load_model_ep']) if config['load_model_ep'] else 99
+            load_ep = str(config['load_model_ep']) if config['load_model_ep'] else '99'
             self.network.load('../model/' + config['load_model_name'] + '/cav_agent_' + self.holon_name + '_ep_' + load_ep)
 
         self.var = config['var']
@@ -837,3 +909,83 @@ class LoyalCavAgent:
         self.reward_list = []
         self.for_manager = {'obs': [[[-1] * 8 for _ in range(8)] for _ in range(25)],
                             'act': [[[-1] for _ in range(8)] for _ in range(25)]}
+
+
+# class LoyalCavAgent:
+#     def __init__(self, light_id, config):
+#         if isinstance(light_id, str):
+#             self.holon_name = light_id
+#             self.light_id = [light_id]
+#         elif isinstance(light_id, (list, tuple)):
+#             self.holon_name = 'h_' + light_id[0]
+#             self.light_id = list(light_id)
+#
+#         self.network = WorkerTD3(config)
+#         self.save = lambda path, ep: print('Loyal Agent no need to save')
+#         self.funcnet = FuncNet(2, 3, 1)
+#
+#         self.use_CAV = config['use_CAV']
+#         self.train_model = config['train_model']
+#         self.load_model = config['load_model_name'] is not None
+#
+#         self.var = config['var']
+#         self.T = config['cav']['T']
+#
+#         self.last_car_list = {light: [] for light in self.light_id}
+#         self.target_speed = {light: [] for light in self.light_id}
+#         self.reward_list = []
+#         self.for_manager = {'obs': [[[-1] * 8 for _ in range(8)] for _ in range(25)],
+#                             'act': [[[-1] for _ in range(8)] for _ in range(25)]}
+#
+#     @property
+#     def pointer(self):
+#         return self.network.pointer
+#
+#     @property
+#     def learn_begin(self):
+#         return self.network.learn_begin
+#
+#     def get_oa(self):
+#         obs_seq = self.for_manager['obs']
+#         act_seq = self.for_manager['act']
+#         # self.for_manager = {'obs': [], 'act': []}
+#         return obs_seq, act_seq
+#
+#     def step(self, env, goal, next_phase):
+#         for light_idx, light in enumerate(self.light_id):
+#             self._step(env, goal[light_idx], next_phase[light_idx], light)
+#         return [None] * len(self.light_id), [None] * len(self.light_id)
+#
+#     def _step(self, env, goal, next_phase, light):
+#         next_acc, real_a = None, None
+#
+#         if self.use_CAV:
+#             if goal is not None:
+#                 self.funcnet.update_param(goal)
+#
+#             curr_car, curr_tar_v = [], []
+#             for lid, lane in enumerate(env.light_get_lane(light)):  # 必控制所有车道所有车(无论是不是CAV)
+#                 lane_car = env.lane_get_all_car(lane)
+#                 curr_car.extend(lane_car)
+#
+#                 for car in lane_car:
+#                     speed_advice = self.funcnet([env.get_car_x(car), float(lid)])
+#                     # env.set_lane_act_speed(car, curr_tar_v[-1])
+#                     env.set_lane_act_speed(car, speed_advice)
+#
+#             for vehicle in self.last_car_list[light]:
+#                 if vehicle not in curr_car:
+#                     env.reset_head_cav(vehicle)
+#             self.last_car_list[light] = curr_car
+#
+#         # self.for_manager['obs'].append([[-1] * 8 for _ in range(8)])
+#         # self.for_manager['act'].append([[-1] for _ in range(8)])
+#
+#         return (real_a, next_acc) if not real_a or not next_acc else (real_a * env.max_acc, next_acc * env.max_acc)
+#
+#     def reset(self):
+#         self.last_car_list = {light: [] for light in self.light_id}
+#         self.target_speed = {light: [] for light in self.light_id}
+#         self.reward_list = []
+#         self.for_manager = {'obs': [[[-1] * 8 for _ in range(8)] for _ in range(25)],
+#                             'act': [[[-1] for _ in range(8)] for _ in range(25)]}
