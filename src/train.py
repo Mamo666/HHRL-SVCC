@@ -75,6 +75,7 @@ def setting(base_key, change):
 
 
 experience_cfg = {
+    # # # # Here: 公司电脑
     # # Note：Done
     # 'Gv_noOPC_loyal_pretrain_manager': setting('Gv', {}),
     # 'Gv_noOPC_worker_pretrained_manager': setting('Gv', {
@@ -99,29 +100,69 @@ experience_cfg = {
     #     'light': {'train_model': False, 'load_model_name': '0721_new_rou/Gv_noOPC_loyal_pretrain_manager'},
     #     'cav': {'cav': {'T': 2}, 'alpha': .5, 'only_ctrl_curr_phase': False, 'only_ctrl_head_cav': True}}),
 
+    # # 0726
     # 'T': setting('T', {}),
     # 'tp': setting('tp', {}),
     # 'tpgv_noOPC_loyal_pretrain_manager': setting('tpgv', {}),
     # 'Gv_noOPC_loyal_pretrain_manager': setting('Gv', {}),
     # 'V': setting('V', {}),
+    
+    # 'T': setting('T', {}),
+    # 'Gv_loyal': setting('Gv', {}),
+    # # '0731_four_rou4'， /表示half?
+    # 'tp_ffi4': setting('tp', {}),/
+    # 'T_ffi4': setting('T', {}),/
+    # 'tp_ffi0-5mix': setting('tp', {}),/
 
     # # Note：Doing
-    'T': setting('T', {}),
-    'Gv_loyal': setting('Gv', {}),
+    # # 0802:'0802_four_rou0&4',half
+    # 'Gv_loyal_no_set_speed_mode': setting('Gv', {}),
+
+    # 'Gv_loyal_same_obs_adjO&R': setting('Gv', {}),
+    # 'tpgv_loyal_same_obs_adjO&R': setting('tpgv', {}),
+    # 'tp_same_obs_adjO&R': setting('tp', {}),
+    # 'T_same_obs_adjO&R': setting('T', {}),
+    # 'tpgv_worker_same_obs_adjO&R': setting('tpgv', {
+    #     'light': {'load_model_name': '0802_four_rou/tpgv_loyal_same_obs_adjO&R_0', 'load_model_ep': 49},
+    #     'cav': {'cav': {'T': 2}, 'alpha': .5, 'learn_start_ratio': 0.2}}),
+    # 'Gv_loyal_same_obs_adjO&R_outFunc': setting('Gv', {'light': {'vehicle': {'act_dim': 65}}}),
+    # 'Gv_loyal_same_obs_adjO&R_outFunc2': setting('Gv', {'light': {'vehicle': {'act_dim': 13}}}),
+
+    # # Note: To do
+    # 'tpgv_loyal_no_set_speed_mode': setting('tpgv', {}),
+    # 'Gv_loyal_better': setting('Gv', {}),
 
     # # Note: To do
     # 'tpgv_noOPC_worker_pretrained_manager': setting('tpgv', {
     #     'light': {'load_model_name': '0721_new_rou/tpgv_noOPC_loyal_pretrain_manager'}})
+
+    # # # # Here: 宿舍电脑
+    # # Note：Done
+
+    # # Note：Doing
+
+    # # Note: To do
+
+    # # # # Here: 实验室电脑
+    # # Note：Done
+
+    # # Note：Doing
+
+    # # Note: To do
+
 }
 
-series_name = '0728_four_rou4'
+# experience_cfg = {'Gv_loyal_same_obs_adjO&R_mode-' + str(_): setting('Gv', {'light': {'reward_flag': _}}) for _ in range(14)}
+experience_cfg = {'tpgv_loyal_same_obs_adjO&R_mode-' + str(_): setting('tpgv', {'light': {'reward_flag': _}}) for _ in [-1]}  # [13, 12, 11, 10, 9, 8] [7, 6, 5, 4, 3, 2] [0, 1]
+series_name = '0805_four_rou'
+env_configs['four']['rou_path'] = 'four/rou_half/'    # 防止两边同时运行修改时撞车
 SINGLE_FLAG = False
-MAX_EPISODES = 50  # 训练轮数
+MAX_EPISODES = 30  # 训练轮数
 SUMO_GUI = False
 # flow_feat_id_list = [0, 1, 2, 3, 4, 5]
 flow_feat_id_list = [4]
-
-
+# flow_feat_id_list = None  # 表示使用所有flow_feat
+# flow_feat_id_list = [0, 4]
 
 
 def launch_experiment(exp_cfg, save_model=True, single_flag=True, flow_feat_id=None):
@@ -153,7 +194,10 @@ def launch_experiment(exp_cfg, save_model=True, single_flag=True, flow_feat_id=N
 
     for episode in range(MAX_EPISODES):
         # rou_file_num = np.random.randint(1, 16)  # 随机选取一个训练环境
-        rou_file_num = np.random.randint(flow_feat_id * 5 + 1, flow_feat_id * 5 + 6)  # 随机选取一个训练环境
+        if flow_feat_id is None:
+            rou_file_num = np.random.randint(1, 31)  # 随机选取一个训练环境
+        else:
+            rou_file_num = np.random.randint(flow_feat_id * 5 + 1, flow_feat_id * 5 + 6)  # 随机选取一个训练环境
         print("Ep:", episode, "File:", env.rou_path, rou_file_num, '\t', time.strftime("%Y-%m-%d %H:%M:%S"))
         if light_agent[0].pointer > light_agent[0].learn_begin and cav_agent[0].pointer > cav_agent[0].learn_begin:
             SUMO_GUI = exp_cfg['turn_on_gui_after_learn_start']
