@@ -155,7 +155,9 @@ def generate_flow(net_mode: str, rou_path: str, total_car_num: list, space_dist_
 if __name__ == "__main__":
     np.random.seed(3407)  # 设置随机种子
 
-    rou_dir = 'single/rou_test'
+    # rou_dir = 'single/rou_test'
+    rou_dir = 'four/rou_half'
+    mkdir('../sumo_sim_env/' + rou_dir)
 
     cav_penetration = 0.2
     space_imbalance_ratio = 0.16 if 'single' in rou_dir else 0.1
@@ -189,7 +191,7 @@ if __name__ == "__main__":
     }
     if 'four' in rou_dir:  # 2*2入口数翻一倍，路口数翻四倍，大概估计把车流量*2(试过2.5)来从single转到2*2
         for _, ft in feature_config.items():
-            ft['time_dist'] = [int(_ * 2) for _ in ft['time_dist']]
+            ft['time_dist'] = [int(_ * 1) for _ in ft['time_dist']]
 
     total_n_file = 0
     for feature in feature_config:
@@ -197,7 +199,7 @@ if __name__ == "__main__":
         for i in range(5):
             total_n_file += 1
             rou_file_num = str(total_n_file) if total_n_file >= 10 else '0' + str(total_n_file)
-            random_space_dict = generate_flow(net_mode=rou_dir,
+            random_space_dict = generate_flow(net_mode=rou_dir.split('/')[0],
                                               rou_path='../sumo_sim_env/' + rou_dir + '/rou.rou' + rou_file_num + '.xml',
                                               total_car_num=feature_config[feature]['time_dist'],
                                               space_dist_len=feature_config[feature]['space_dist_len'],
